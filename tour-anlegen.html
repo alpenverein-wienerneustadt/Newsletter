@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tour ausschreiben – Tourenführer Portal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:      #F4F2EA;
+    --paper-2:    #ECE8DB;
+    --ink:        #22261F;
+    --ink-soft:   #565A4E;
+    --line:       #C9C4B2;
+    --forest:     #3F5A3D;
+    --forest-dk:  #2C4029;
+    --trail:      #9C6B3E;
+    --error:      #A5432E;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{ margin:0; padding:0; }
+
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', system-ui, sans-serif;
+    font-size:16px;
+    line-height:1.5;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+
+  .page{
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+  }
+
+  /* --- Kopf: Konturlinien-Motiv statt generischem Icon --- */
+  header.masthead{
+    margin-bottom: 36px;
+  }
+
+  .contour{
+    width: 100%;
+    height: 46px;
+    display:block;
+    margin-bottom: 18px;
+    opacity: 0.55;
+  }
+
+  .eyebrow-line{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+    color: var(--trail);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+  }
+  .eyebrow-line svg{ flex-shrink:0; }
+
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-optical-sizing: auto;
+    font-size: clamp(30px, 6vw, 40px);
+    line-height: 1.08;
+    margin: 0 0 8px;
+    color: var(--forest-dk);
+  }
+
+  .sub{
+    color: var(--ink-soft);
+    font-size: 15px;
+    max-width: 46ch;
+  }
+
+  /* --- Formular --- */
+  form{
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    box-shadow: 0 1px 0 rgba(34,38,31,0.03);
+  }
+
+  .section{
+    padding: 28px 28px 8px;
+    border-bottom: 1px solid var(--paper-2);
+  }
+  .section:last-of-type{ border-bottom:none; }
+
+  .section-title{
+    font-family:'Fraunces', serif;
+    font-size: 19px;
+    font-weight: 600;
+    color: var(--forest-dk);
+    margin: 0 0 4px;
+    display:flex;
+    align-items:baseline;
+    gap: 10px;
+  }
+  .section-title .idx{
+    font-family:'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--trail);
+    border: 1px solid var(--trail);
+    border-radius: 50%;
+    width: 20px; height: 20px;
+    display:inline-flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .section-hint{
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    margin: 0 0 20px;
+  }
+
+  .field{
+    margin-bottom: 20px;
+  }
+  .row{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  @media (max-width: 520px){
+    .row{ grid-template-columns: 1fr; }
+  }
+
+  label{
+    display:block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  label .opt{
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  input[type=text],
+  input[type=date],
+  input[type=time],
+  input[type=number],
+  select,
+  textarea{
+    width: 100%;
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 11px 12px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  textarea{ resize: vertical; min-height: 90px; }
+
+  input:focus, select:focus, textarea:focus{
+    outline: none;
+    border-color: var(--forest);
+    background: #fff;
+  }
+  input:focus-visible, select:focus-visible, textarea:focus-visible{
+    box-shadow: 0 0 0 3px rgba(63,90,61,0.18);
+  }
+
+  .field-error{
+    display:none;
+    font-size: 12.5px;
+    color: var(--error);
+    margin-top: 5px;
+  }
+  .field.invalid input,
+  .field.invalid select,
+  .field.invalid textarea{
+    border-color: var(--error);
+  }
+  .field.invalid .field-error{ display:block; }
+
+  .price-pair{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .price-pair .field{ margin-bottom:0; }
+  .price-input{ position:relative; }
+  .price-input input{ padding-right: 34px; }
+  .price-input::after{
+    content: "€";
+    position:absolute;
+    right: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--ink-soft);
+    font-size: 14px;
+    pointer-events:none;
+  }
+
+  /* --- Footer / Submit --- */
+  .actions{
+    padding: 24px 28px 28px;
+    display:flex;
+    align-items:center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  button[type=submit]{
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    color: #fff;
+    background: var(--forest);
+    border: none;
+    border-radius: 2px;
+    padding: 13px 26px;
+    cursor: pointer;
+    transition: background .15s ease;
+  }
+  button[type=submit]:hover{ background: var(--forest-dk); }
+  button[type=submit]:disabled{
+    background: var(--line);
+    cursor: not-allowed;
+  }
+
+  .status-msg{
+    font-size: 14px;
+    display:none;
+  }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color: var(--forest-dk); }
+  .status-msg.err{ color: var(--error); }
+
+  .config-warning{
+    display:none;
+    background: #FBEFE8;
+    border: 1px solid #E3B896;
+    color: #7A4322;
+    font-size: 13.5px;
+    padding: 12px 16px;
+    border-radius: 2px;
+    margin-bottom: 24px;
+  }
+  .config-warning.show{ display:block; }
+
+  footer.note{
+    margin-top: 28px;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="masthead">
+    <svg class="contour" viewBox="0 0 600 46" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 36 C 40 10, 80 40, 120 22 S 200 4, 240 26 S 320 42, 360 18 S 440 6, 480 24 S 560 38, 600 14"
+            fill="none" stroke="#3F5A3D" stroke-width="1.2"/>
+      <path d="M0 30 C 40 6, 80 32, 120 16 S 200 -2, 240 18 S 320 34, 360 12 S 440 0, 480 16 S 560 30, 600 8"
+            fill="none" stroke="#9C6B3E" stroke-width="1" opacity="0.6"/>
+    </svg>
+    <div class="eyebrow-line">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      Tourenführer Portal
+    </div>
+    <h1>Tour ausschreiben</h1>
+    <p class="sub">Trag hier die Eckdaten eurer Tour ein. Sobald du speicherst, erscheint sie öffentlich in der Tourenliste.</p>
+  </header>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein
+    (Zeile mit <code>firebaseConfig</code>), sonst kann die Tour nicht gespeichert werden.
+  </div>
+
+  <form id="tourForm" novalidate>
+
+    <div class="section">
+      <p class="section-title"><span class="idx">1</span> Eckdaten</p>
+      <p class="section-hint">Titel und Termin, damit die Tour in der Liste auffindbar ist.</p>
+
+      <div class="field" id="f-titel">
+        <label for="titel">Titel der Tour</label>
+        <input type="text" id="titel" name="titel" placeholder="z. B. Hochschwab – Überschreitung" required>
+        <p class="field-error">Bitte einen Titel eingeben.</p>
+      </div>
+
+      <div class="row">
+        <div class="field" id="f-datum">
+          <label for="datum">Datum</label>
+          <input type="date" id="datum" name="datum" required>
+          <p class="field-error">Bitte ein Datum wählen.</p>
+        </div>
+        <div class="field" id="f-datumEnde">
+          <label for="datumEnde">Enddatum <span class="opt">(bei Mehrtagestouren)</span></label>
+          <input type="date" id="datumEnde" name="datumEnde">
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field" id="f-treffpunkt">
+          <label for="treffpunkt">Treffpunkt</label>
+          <input type="text" id="treffpunkt" name="treffpunkt" placeholder="z. B. Parkplatz Bahnhof" required>
+          <p class="field-error">Bitte einen Treffpunkt angeben.</p>
+        </div>
+        <div class="field" id="f-treffzeit">
+          <label for="treffzeit">Treffzeit</label>
+          <input type="time" id="treffzeit" name="treffzeit" required>
+          <p class="field-error">Bitte eine Uhrzeit angeben.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title"><span class="idx">2</span> Anforderungen</p>
+      <p class="section-hint">Hilft Teilnehmer:innen einzuschätzen, ob die Tour zu ihnen passt.</p>
+
+      <div class="row">
+        <div class="field" id="f-disziplin">
+          <label for="disziplin">Disziplin</label>
+          <select id="disziplin" name="disziplin" required>
+            <option value="" disabled selected>Bitte wählen</option>
+            <option value="wandern">Wandern</option>
+            <option value="klettersteig">Klettersteig</option>
+            <option value="klettertour">Klettertour</option>
+            <option value="hochtour">Hochtour</option>
+            <option value="schitour">Schitour</option>
+            <option value="schneeschuh">Schneeschuh</option>
+            <option value="mountainbike">Mountainbike</option>
+          </select>
+          <p class="field-error">Bitte eine Disziplin wählen.</p>
+        </div>
+        <div class="field" id="f-schwierigkeit">
+          <label for="schwierigkeit">Schwierigkeit</label>
+          <select id="schwierigkeit" name="schwierigkeit" required>
+            <option value="" disabled selected>Bitte wählen</option>
+            <option value="leicht">Leicht</option>
+            <option value="mittel">Mittel</option>
+            <option value="schwer">Schwer</option>
+          </select>
+          <p class="field-error">Bitte eine Schwierigkeit wählen.</p>
+        </div>
+      </div>
+
+      <div class="field" id="f-maxTeilnehmer">
+        <label for="maxTeilnehmer">Max. Teilnehmerzahl</label>
+        <input type="number" id="maxTeilnehmer" name="maxTeilnehmer" min="1" step="1" placeholder="z. B. 12" required>
+        <p class="field-error">Bitte eine Zahl größer 0 angeben.</p>
+      </div>
+
+      <div class="field" id="f-anmeldeschluss">
+        <label for="anmeldeschluss">Anmeldeschluss <span class="opt">(optional)</span></label>
+        <input type="date" id="anmeldeschluss" name="anmeldeschluss">
+      </div>
+
+      <div class="field" id="f-ausruestung">
+        <label for="ausruestung">Mitzubringende Ausrüstung <span class="opt">(optional)</span></label>
+        <textarea id="ausruestung" name="ausruestung" placeholder="z. B. Klettersteigset, festes Schuhwerk"></textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title"><span class="idx">3</span> Beschreibung</p>
+      <p class="section-hint">Route, Charakter der Tour, was Teilnehmer:innen erwartet.</p>
+
+      <div class="field" id="f-beschreibung">
+        <label for="beschreibung">Beschreibung</label>
+        <textarea id="beschreibung" name="beschreibung" style="min-height:140px" required></textarea>
+        <p class="field-error">Bitte eine Beschreibung eingeben.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title"><span class="idx">4</span> Kosten</p>
+      <p class="section-hint">Materialbeitrag oder sonstige Kosten pro Person.</p>
+
+      <div class="price-pair">
+        <div class="field">
+          <label for="kostenMitglied">Mitglieder</label>
+          <div class="price-input">
+            <input type="number" id="kostenMitglied" name="kostenMitglied" min="0" step="0.5" placeholder="0">
+          </div>
+        </div>
+        <div class="field">
+          <label for="kostenNichtmitglied">Nicht-Mitglieder</label>
+          <div class="price-input">
+            <input type="number" id="kostenNichtmitglied" name="kostenNichtmitglied" min="0" step="0.5" placeholder="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title"><span class="idx">5</span> Tourenführer:in</p>
+      <p class="section-hint">Wird sichtbar als verantwortliche Ansprechperson. Später ersetzt der Login dieses Feld automatisch.</p>
+
+      <div class="field" id="f-erstelltVon">
+        <label for="erstelltVon">Dein Name</label>
+        <input type="text" id="erstelltVon" name="erstelltVon" required>
+        <p class="field-error">Bitte deinen Namen angeben.</p>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submitBtn">Tour veröffentlichen</button>
+      <p class="status-msg" id="statusMsg"></p>
+    </div>
+  </form>
+
+  <footer class="note">Status wird beim Anlegen automatisch auf „geplant“ gesetzt.</footer>
+</div>
+
+<!-- Firebase (compat-Version, passend für GitHub Pages ohne Build-Step) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // ---------------------------------------------------------------
+  // TODO: Hier eure eigene Firebase-Projekt-Konfiguration eintragen.
+  // Zu finden in der Firebase-Konsole unter: Projekteinstellungen → "Meine Apps" → Web-App
+  // ---------------------------------------------------------------
+  const firebaseConfig = {
+    apiKey: "DEIN_API_KEY",
+    authDomain: "DEIN_PROJEKT.firebaseapp.com",
+    projectId: "DEIN_PROJEKT",
+    storageBucket: "DEIN_PROJEKT.appspot.com",
+    messagingSenderId: "...",
+    appId: "..."
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  let db = null;
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+  }
+
+  const form = document.getElementById('tourForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  const requiredFields = ['titel', 'datum', 'treffpunkt', 'treffzeit', 'disziplin', 'schwierigkeit', 'maxTeilnehmer', 'beschreibung', 'erstelltVon'];
+
+  function validate() {
+    let valid = true;
+    requiredFields.forEach(id => {
+      const el = document.getElementById(id);
+      const wrap = document.getElementById('f-' + id);
+      const empty = !el.value || (el.type === 'number' && Number(el.value) <= 0);
+      if (wrap) wrap.classList.toggle('invalid', empty);
+      if (empty) valid = false;
+    });
+    return valid;
+  }
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusMsg.className = 'status-msg';
+
+    if (!validate()) {
+      statusMsg.textContent = 'Bitte die markierten Felder ausfüllen.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
+    if (!isConfigured) {
+      statusMsg.textContent = 'Firebase ist nicht konfiguriert – siehe Hinweis oben.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
+    const data = {
+      titel: document.getElementById('titel').value.trim(),
+      beschreibung: document.getElementById('beschreibung').value.trim(),
+      datum: document.getElementById('datum').value,
+      datumEnde: document.getElementById('datumEnde').value || null,
+      treffpunkt: document.getElementById('treffpunkt').value.trim(),
+      treffzeit: document.getElementById('treffzeit').value,
+      disziplin: document.getElementById('disziplin').value,
+      schwierigkeit: document.getElementById('schwierigkeit').value,
+      maxTeilnehmer: Number(document.getElementById('maxTeilnehmer').value),
+      anmeldeschluss: document.getElementById('anmeldeschluss').value || null,
+      ausruestung: document.getElementById('ausruestung').value.trim() || null,
+      kostenMitglied: Number(document.getElementById('kostenMitglied').value) || 0,
+      kostenNichtmitglied: Number(document.getElementById('kostenNichtmitglied').value) || 0,
+      status: 'geplant',
+      erstelltVon: document.getElementById('erstelltVon').value.trim(),
+      erstelltAm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Speichere …';
+
+    try {
+      await db.collection('touren').add(data);
+      statusMsg.textContent = 'Tour gespeichert und veröffentlicht.';
+      statusMsg.classList.add('show', 'ok');
+      form.reset();
+      requiredFields.forEach(id => {
+        const wrap = document.getElementById('f-' + id);
+        if (wrap) wrap.classList.remove('invalid');
+      });
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler beim Speichern: ' + err.message;
+      statusMsg.classList.add('show', 'err');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Tour veröffentlichen';
+    }
+  });
+</script>
+
+</body>
+</html>
