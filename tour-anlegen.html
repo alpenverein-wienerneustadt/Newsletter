@@ -252,6 +252,20 @@
   }
   .config-warning.show{ display:block; }
 
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin-bottom:24px; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; text-decoration:none; border-bottom:1px solid var(--forest); }
+
+  .user-bar{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13.5px; color:var(--ink-soft); margin-bottom:16px; padding:0 2px;
+  }
+  .user-bar a{ color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); }
+  .user-bar a:hover{ color:var(--forest-dk); border-color:var(--forest); }
+
   footer.note{
     margin-top: 28px;
     font-size: 12.5px;
@@ -284,7 +298,16 @@
     (Zeile mit <code>firebaseConfig</code>), sonst kann die Tour nicht gespeichert werden.
   </div>
 
-  <form id="tourForm" novalidate>
+  <div id="authGate" class="auth-box">
+    <p>Anmeldestatus wird geprüft …</p>
+  </div>
+
+  <div id="userBar" class="user-bar" style="display:none">
+    <span>Angemeldet als <strong id="userBarName"></strong></span>
+    <a href="#" id="logoutLink">Abmelden</a>
+  </div>
+
+  <form id="tourForm" novalidate style="display:none">
 
     <div class="section">
       <p class="section-title"><span class="idx">1</span> Eckdaten</p>
@@ -368,6 +391,11 @@
         <label for="ausruestung">Mitzubringende Ausrüstung <span class="opt">(optional)</span></label>
         <textarea id="ausruestung" name="ausruestung" placeholder="z. B. Klettersteigset, festes Schuhwerk"></textarea>
       </div>
+
+      <div class="field" id="f-besonderheiten">
+        <label for="besonderheiten">Besonderheiten der Tour <span class="opt">(optional)</span></label>
+        <input type="text" id="besonderheiten" name="besonderheiten" placeholder="z. B. Gratwanderung, Schluchtwanderung">
+      </div>
     </div>
 
     <div class="section">
@@ -401,17 +429,6 @@
       </div>
     </div>
 
-    <div class="section">
-      <p class="section-title"><span class="idx">5</span> Tourenführer:in</p>
-      <p class="section-hint">Wird sichtbar als verantwortliche Ansprechperson. Später ersetzt der Login dieses Feld automatisch.</p>
-
-      <div class="field" id="f-erstelltVon">
-        <label for="erstelltVon">Dein Name</label>
-        <input type="text" id="erstelltVon" name="erstelltVon" required>
-        <p class="field-error">Bitte deinen Namen angeben.</p>
-      </div>
-    </div>
-
     <div class="actions">
       <button type="submit" id="submitBtn">Tour veröffentlichen</button>
       <p class="status-msg" id="statusMsg"></p>
@@ -423,6 +440,7 @@
 
 <!-- Firebase (compat-Version, passend für GitHub Pages ohne Build-Step) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
 <script>
@@ -441,19 +459,79 @@
 
   const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
   let db = null;
+  let auth = null;
+  let aktuellerUser = null;      // { uid, name }
+
+  const authGate = document.getElementById('authGate');
+  const userBar = document.getElementById('userBar');
+  const form = document.getElementById('tourForm');
 
   if (isConfigured) {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
+    auth = firebase.auth();
+    initAuthGate();
   } else {
     document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
   }
 
-  const form = document.getElementById('tourForm');
+  function initAuthGate() {
+    auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        authGate.className = 'auth-box';
+        authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+        userBar.style.display = 'none';
+        form.style.display = 'none';
+        return;
+      }
+
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        if (!doc.exists) {
+          authGate.className = 'auth-box err';
+          authGate.innerHTML = 'Kein Profil gefunden. Bitte über <a href="login.html">die Registrierung</a> neu anmelden.';
+          form.style.display = 'none';
+          return;
+        }
+        const profil = doc.data();
+
+        if (profil.status === 'gesperrt') {
+          authGate.className = 'auth-box err';
+          authGate.innerHTML = 'Dein Zugang wurde gesperrt. Bitte wende dich an den Vorstand.';
+          form.style.display = 'none';
+          userBar.style.display = 'flex';
+        } else if (profil.status !== 'genehmigt') {
+          authGate.className = 'auth-box';
+          authGate.innerHTML = 'Dein Account wartet noch auf Freischaltung durch den Vorstand.';
+          form.style.display = 'none';
+          userBar.style.display = 'flex';
+        } else {
+          authGate.style.display = 'none';
+          userBar.style.display = 'flex';
+          form.style.display = 'block';
+          aktuellerUser = { uid: user.uid, name: profil.name || user.email };
+        }
+
+        document.getElementById('userBarName').textContent = profil.name || user.email;
+      } catch (err) {
+        console.error(err);
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Fehler beim Prüfen des Anmeldestatus: ' + err.message;
+        form.style.display = 'none';
+      }
+    });
+
+    document.getElementById('logoutLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      auth.signOut();
+    });
+  }
+
   const submitBtn = document.getElementById('submitBtn');
   const statusMsg = document.getElementById('statusMsg');
 
-  const requiredFields = ['titel', 'datum', 'treffpunkt', 'treffzeit', 'disziplin', 'schwierigkeit', 'maxTeilnehmer', 'beschreibung', 'erstelltVon'];
+  const requiredFields = ['titel', 'datum', 'treffpunkt', 'treffzeit', 'disziplin', 'schwierigkeit', 'maxTeilnehmer', 'beschreibung'];
 
   function validate() {
     let valid = true;
@@ -483,6 +561,12 @@
       return;
     }
 
+    if (!aktuellerUser) {
+      statusMsg.textContent = 'Anmeldestatus konnte nicht bestätigt werden. Bitte Seite neu laden.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
     const data = {
       titel: document.getElementById('titel').value.trim(),
       beschreibung: document.getElementById('beschreibung').value.trim(),
@@ -495,11 +579,14 @@
       maxTeilnehmer: Number(document.getElementById('maxTeilnehmer').value),
       anmeldeschluss: document.getElementById('anmeldeschluss').value || null,
       ausruestung: document.getElementById('ausruestung').value.trim() || null,
+      besonderheiten: document.getElementById('besonderheiten').value
+        .split(',').map(s => s.trim()).filter(s => s.length > 0),
       kostenMitglied: Number(document.getElementById('kostenMitglied').value) || 0,
       kostenNichtmitglied: Number(document.getElementById('kostenNichtmitglied').value) || 0,
       status: 'geplant',
       bestaetigtAnzahl: 0,
-      erstelltVon: document.getElementById('erstelltVon').value.trim(),
+      erstelltVon: aktuellerUser.name,
+      erstelltVonUid: aktuellerUser.uid,
       erstelltAm: firebase.firestore.FieldValue.serverTimestamp()
     };
 
