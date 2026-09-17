@@ -117,12 +117,12 @@
 <script>
   // TODO: gleiche Config wie in tour-anlegen.html / index.html eintragen
   const firebaseConfig = {
-    apiKey: "DEIN_API_KEY",
-    authDomain: "DEIN_PROJEKT.firebaseapp.com",
-    projectId: "DEIN_PROJEKT",
-    storageBucket: "DEIN_PROJEKT.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
   };
 
   const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
@@ -167,30 +167,21 @@
         return;
       }
       const tour = { id: doc.id, ...doc.data() };
-
-      let bestaetigtAnzahl = null;
-      try {
-        const countSnap = await db.collection('touren').doc(id)
-          .collection('anmeldungen').where('status', '==', 'bestätigt').count().get();
-        bestaetigtAnzahl = countSnap.data().count;
-      } catch (e) { /* count() evtl. nicht verfügbar */ }
-
-      render(db, tour, bestaetigtAnzahl);
+      render(db, tour);
     } catch (err) {
       console.error(err);
       contentEl.innerHTML = '<p class="empty">Fehler beim Laden: ' + err.message + '</p>';
     }
   }
 
-  function render(db, tour, bestaetigtAnzahl) {
-    const frei = bestaetigtAnzahl === null ? null : tour.maxTeilnehmer - bestaetigtAnzahl;
-    const istVoll = frei !== null && frei <= 0;
+  function render(db, tour) {
+    const bestaetigt = tour.bestaetigtAnzahl || 0;
+    const frei = tour.maxTeilnehmer - bestaetigt;
+    const istVoll = frei <= 0;
 
-    const platzText = bestaetigtAnzahl === null
-      ? ''
-      : istVoll
-        ? `<p class="platz-info voll">Alle Plätze vergeben – Anmeldung landet auf der Warteliste.</p>`
-        : `<p class="platz-info frei">${frei} von ${tour.maxTeilnehmer} Plätzen frei</p>`;
+    const platzText = istVoll
+      ? `<p class="platz-info voll">Alle Plätze vergeben – Anmeldung landet auf der Warteliste.</p>`
+      : `<p class="platz-info frei">${frei} von ${tour.maxTeilnehmer} Plätzen frei</p>`;
 
     contentEl.innerHTML = `
       <h1>${escapeHtml(tour.titel)}</h1>
@@ -286,17 +277,28 @@
     submitBtn.textContent = 'Wird gesendet …';
 
     try {
-      // Aktuelle Platzzahl unmittelbar vor dem Speichern neu prüfen (vermeidet Race Conditions bei Massenandrang)
-      const countSnap = await db.collection('touren').doc(tour.id)
-        .collection('anmeldungen').where('status', '==', 'bestätigt').count().get();
-      const bestaetigt = countSnap.data().count;
-      const status = bestaetigt < tour.maxTeilnehmer ? 'bestätigt' : 'warteliste';
+      // Transaktion: Zähler am Tour-Dokument und die Anmeldung selbst werden atomar geschrieben,
+      // damit bei gleichzeitigen Anmeldungen niemand versehentlich doppelt den letzten Platz bekommt.
+      const tourRef = db.collection('touren').doc(tour.id);
+      const anmeldungRef = tourRef.collection('anmeldungen').doc();
 
-      await db.collection('touren').doc(tour.id).collection('anmeldungen').add({
-        name, telefon: telefon || null, email: email || null,
-        mitglied: mitgliedEl.value === 'ja',
-        status,
-        angemeldetAm: firebase.firestore.FieldValue.serverTimestamp()
+      const status = await db.runTransaction(async (tx) => {
+        const tourSnap = await tx.get(tourRef);
+        const bestaetigt = tourSnap.data().bestaetigtAnzahl || 0;
+        const maxTeilnehmer = tourSnap.data().maxTeilnehmer;
+        const neuerStatus = bestaetigt < maxTeilnehmer ? 'bestätigt' : 'warteliste';
+
+        tx.set(anmeldungRef, {
+          name, telefon: telefon || null, email: email || null,
+          mitglied: mitgliedEl.value === 'ja',
+          status: neuerStatus,
+          angemeldetAm: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        if (neuerStatus === 'bestätigt') {
+          tx.update(tourRef, { bestaetigtAnzahl: bestaetigt + 1 });
+        }
+        return neuerStatus;
       });
 
       statusMsg.textContent = status === 'bestätigt'

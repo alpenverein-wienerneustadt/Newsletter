@@ -155,12 +155,12 @@
 <script>
   // TODO: gleiche Config wie in tour-anlegen.html eintragen
   const firebaseConfig = {
-    apiKey: "DEIN_API_KEY",
-    authDomain: "DEIN_PROJEKT.firebaseapp.com",
-    projectId: "DEIN_PROJEKT",
-    storageBucket: "DEIN_PROJEKT.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
   };
 
   const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
@@ -195,18 +195,7 @@
         .orderBy('datum', 'asc')
         .get();
 
-      alleTouren = [];
-      for (const doc of snap.docs) {
-        const tour = { id: doc.id, ...doc.data() };
-        try {
-          const countSnap = await db.collection('touren').doc(doc.id)
-            .collection('anmeldungen').where('status', '==', 'bestätigt').count().get();
-          tour.bestaetigtAnzahl = countSnap.data().count;
-        } catch (e) {
-          tour.bestaetigtAnzahl = null; // falls count() nicht verfügbar, still darstellen
-        }
-        alleTouren.push(tour);
-      }
+      alleTouren = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       render();
     } catch (err) {
       console.error(err);
@@ -225,12 +214,11 @@
     }
 
     listEl.innerHTML = gefiltert.map(t => {
-      const frei = t.bestaetigtAnzahl === null ? null : t.maxTeilnehmer - t.bestaetigtAnzahl;
-      const platzHtml = frei === null
-        ? ''
-        : frei > 0
-          ? `<span class="platz-frei">${frei} von ${t.maxTeilnehmer} Plätzen frei</span>`
-          : `<span class="platz-voll">Warteliste</span>`;
+      const bestaetigt = t.bestaetigtAnzahl || 0;
+      const frei = t.maxTeilnehmer - bestaetigt;
+      const platzHtml = frei > 0
+        ? `<span class="platz-frei">${frei} von ${t.maxTeilnehmer} Plätzen frei</span>`
+        : `<span class="platz-voll">Warteliste</span>`;
 
       const descExcerpt = (t.beschreibung || '').length > 140
         ? t.beschreibung.slice(0, 140).trim() + '…'

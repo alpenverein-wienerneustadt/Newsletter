@@ -431,12 +431,12 @@
   // Zu finden in der Firebase-Konsole unter: Projekteinstellungen → "Meine Apps" → Web-App
   // ---------------------------------------------------------------
   const firebaseConfig = {
-    apiKey: "DEIN_API_KEY",
-    authDomain: "DEIN_PROJEKT.firebaseapp.com",
-    projectId: "DEIN_PROJEKT",
-    storageBucket: "DEIN_PROJEKT.appspot.com",
-    messagingSenderId: "...",
-    appId: "..."
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
   };
 
   const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
@@ -498,6 +498,7 @@
       kostenMitglied: Number(document.getElementById('kostenMitglied').value) || 0,
       kostenNichtmitglied: Number(document.getElementById('kostenNichtmitglied').value) || 0,
       status: 'geplant',
+      bestaetigtAnzahl: 0,
       erstelltVon: document.getElementById('erstelltVon').value.trim(),
       erstelltAm: firebase.firestore.FieldValue.serverTimestamp()
     };
