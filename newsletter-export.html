@@ -129,14 +129,19 @@
     </div>
 
     <div class="card">
-      <h2>Newsletter-Inhalt</h2>
-      <p class="hint">Erzeugt fertigen HTML-Code aus allen aktuell veröffentlichten Inhalten (Touren, Veranstaltungen, Kurse, Aktuelles) – zum Einfügen in dein Mailprogramm (z. B. Outlook: Einfügen als HTML / "Nur formatierten Text einfügen" deaktivieren).</p>
-      <button class="aktion" id="btnNewsletterGenerieren">Newsletter-HTML generieren</button>
+      <h2>Newsletter</h2>
+      <p class="hint">Bild anhängen + Text einfügen – funktioniert in jeder Mail-App, auch am Handy, ganz ohne Formatierungs-Probleme.</p>
+      <img src="og-banner.png" alt="Newsletter-Banner" style="width:100%;max-width:400px;border-radius:3px;border:1px solid var(--line);display:block;margin-bottom:14px;">
+      <button class="aktion" id="btnNewsletterBildDownload">Bild herunterladen</button>
+      <p class="hint" style="margin-top:14px">Dieses Bild als Anhang zur Mail hinzufügen, dann den Text unten in den Mail-Body kopieren.</p>
+
+      <button class="aktion sekundaer" id="btnNewsletterTextGenerieren" style="margin-top:6px">Text generieren</button>
       <p class="status-msg" id="generierenStatus"></p>
       <div id="newsletterVorschau" style="display:none">
-        <label class="block-label">Fertiger HTML-Code (kopieren und in dein Mailprogramm einfügen)</label>
-        <textarea class="export-block" id="newsletterHtml" style="min-height:160px" readonly></textarea>
-        <button class="aktion sekundaer" id="btnHtmlKopieren" style="margin-top:6px">In Zwischenablage kopieren</button>
+        <label class="block-label">Text zum Kopieren (reiner Text, funktioniert überall)</label>
+        <textarea class="export-block" id="newsletterText" style="min-height:180px" readonly></textarea>
+        <button class="aktion sekundaer" id="btnTextKopieren" style="margin-top:6px">Text kopieren</button>
+        <p class="status-msg" id="textKopiertStatus"></p>
       </div>
     </div>
 
@@ -275,7 +280,14 @@
   });
 
   // ---------- Newsletter-Inhalt ----------
-  document.getElementById('btnNewsletterGenerieren').addEventListener('click', async () => {
+  document.getElementById('btnNewsletterBildDownload').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = 'og-banner.png';
+    a.download = 'newsletter-bild.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  document.getElementById('btnNewsletterTextGenerieren').addEventListener('click', async () => {
     const statusMsg = document.getElementById('generierenStatus');
     statusMsg.className = 'status-msg';
     statusMsg.textContent = 'Wird zusammengestellt …';
@@ -283,25 +295,32 @@
 
     try {
       const heute = new Date().toISOString().slice(0, 10);
-      const [infosSnap, veranstSnap, kurseSnap, tourenSnap] = await Promise.all([
-        db.collection('infosAktuell').orderBy('erstelltAm', 'desc').limit(6).get(),
-        db.collection('veranstaltungen').orderBy('erstelltAm', 'desc').get(),
-        db.collection('kurse').orderBy('erstelltAm', 'desc').get(),
+      const [infosSnap, tourenSnap] = await Promise.all([
+        db.collection('infosAktuell').orderBy('erstelltAm', 'desc').limit(4).get(),
         db.collection('touren').where('status', '==', 'geplant').orderBy('datum', 'asc').get()
       ]);
+      const touren = tourenSnap.docs.map(d => d.data()).filter(t => t.datum >= heute).slice(0, 5);
+      const infos = infosSnap.docs.map(d => d.data());
 
-      const touren = tourenSnap.docs.map(d => d.data()).filter(t => t.datum >= heute);
+      const zeilen = ['Tourenführer Portal – Newsletter', ''];
+      if (infos.length) {
+        zeilen.push('AKTUELLES');
+        infos.forEach(i => zeilen.push(`• ${i.titel}`));
+        zeilen.push('');
+      }
+      if (touren.length) {
+        zeilen.push('TOUREN');
+        touren.forEach(t => zeilen.push(`• ${t.titel} – ${formatDatum(t.datum)}`));
+        zeilen.push('');
+      }
+      zeilen.push('Alle Touren, Kurse, Veranstaltungen & Infos ansehen und anmelden:');
+      zeilen.push(SITE_URL);
+      zeilen.push('');
+      zeilen.push(`Newsletter abmelden: ${SITE_URL}newsletter-abmelden.html`);
 
-      const html = baueNewsletterHtml({
-        infos: infosSnap.docs.map(d => d.data()),
-        veranstaltungen: veranstSnap.docs.map(d => d.data()),
-        kurse: kurseSnap.docs.map(d => d.data()),
-        touren
-      });
-
-      document.getElementById('newsletterHtml').value = html;
+      document.getElementById('newsletterText').value = zeilen.join('\n');
       document.getElementById('newsletterVorschau').style.display = 'block';
-      statusMsg.textContent = 'Fertig – Code unten kopieren.';
+      statusMsg.textContent = 'Fertig.';
       statusMsg.classList.add('ok');
     } catch (err) {
       console.error(err);
@@ -309,50 +328,19 @@
     }
   });
 
-  function baueNewsletterHtml({ infos, veranstaltungen, kurse, touren }) {
-    const abschnitt = (titel, items, renderItem) => {
-      if (!items.length) return '';
-      return `
-<tr><td style="padding:24px 0 8px;font-family:Georgia,serif;font-size:19px;font-weight:bold;color:#2C4029;border-top:1px solid #E0DCCB;">${titel}</td></tr>
-${items.map(renderItem).join('')}`;
-    };
-
-    const infosHtml = abschnitt('Aktuelles', infos, (i) => `
-<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
-<strong>${escapeHtml(i.titel)}</strong><br>${escapeHtml(i.inhalt).replace(/\n/g, '<br>')}
-</td></tr>`);
-
-    const veranstHtml = abschnitt('Veranstaltungen', veranstaltungen, (v) => `
-<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
-<strong>${escapeHtml(v.titel)}</strong>${v.datum ? ' – ' + formatDatum(v.datum) : ''}${v.ort ? ' · ' + escapeHtml(v.ort) : ''}<br>${escapeHtml(v.beschreibung).replace(/\n/g, '<br>')}
-</td></tr>`);
-
-    const kurseHtml = abschnitt('Kurse', kurse, (k) => `
-<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
-<strong>${escapeHtml(k.titel)}</strong>${k.datum ? ' – ' + formatDatum(k.datum) : ''}${k.mindestalter ? ' · ab ' + k.mindestalter + ' Jahren' : ''}<br>${escapeHtml(k.beschreibung).replace(/\n/g, '<br>')}
-</td></tr>`);
-
-    const tourenHtml = abschnitt('Touren', touren, (t) => `
-<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
-<strong>${escapeHtml(t.titel)}</strong> – ${formatDatum(t.datum)}<br>${escapeHtml(t.treffpunkt)} um ${escapeHtml(t.treffzeit)}
-</td></tr>`);
-
-    return `<table role="presentation" width="100%" style="max-width:600px;margin:0 auto;border-collapse:collapse;">
-<tr><td style="padding:0 0 16px;font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#2C4029;">Tourenführer Portal – Newsletter</td></tr>
-${infosHtml}${tourenHtml}${veranstHtml}${kurseHtml}
-<tr><td style="padding:28px 0 8px;font-family:Arial,sans-serif;font-size:14px;">
-<a href="${SITE_URL}" style="color:#2C4029;font-weight:bold;">Alle Touren, Kurse & Infos ansehen und anmelden →</a>
-</td></tr>
-<tr><td style="padding:16px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#565A4E;border-top:1px solid #E0DCCB;">
-Newsletter nicht mehr gewünscht? <a href="${SITE_URL}newsletter-abmelden.html" style="color:#565A4E;">Hier abmelden</a>.
-</td></tr>
-</table>`;
-  }
-
-  document.getElementById('btnHtmlKopieren').addEventListener('click', () => {
-    const ta = document.getElementById('newsletterHtml');
-    ta.select();
-    navigator.clipboard?.writeText(ta.value).catch(() => document.execCommand('copy'));
+  document.getElementById('btnTextKopieren').addEventListener('click', () => {
+    const ta = document.getElementById('newsletterText');
+    const statusMsg = document.getElementById('textKopiertStatus');
+    statusMsg.className = 'status-msg';
+    navigator.clipboard?.writeText(ta.value).then(() => {
+      statusMsg.textContent = 'Kopiert.';
+      statusMsg.classList.add('show', 'ok');
+    }).catch(() => {
+      ta.select();
+      document.execCommand('copy');
+      statusMsg.textContent = 'Kopiert.';
+      statusMsg.classList.add('show', 'ok');
+    });
   });
 </script>
 
