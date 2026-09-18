@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Passwort ändern – Tourenführer Portal</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4C9A2A">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:440px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-size:28px; color:var(--forest-dk); margin:0 0 8px;
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#F0B4AE; background:#FDECEA; color:#8A2A22; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  form{ background:#fff; border:1px solid var(--line); border-radius:3px; padding:24px; margin-top:24px; }
+  .field{ margin-bottom:18px; }
+  label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; }
+  input[type=password]{
+    width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+    background:var(--paper-2); border:1px solid var(--line); border-radius:2px; padding:11px 12px;
+  }
+  input:focus{ outline:none; border-color:var(--forest); background:#fff; }
+  .field-error{ display:none; font-size:12.5px; color:var(--error); margin-top:5px; }
+  .field.invalid input{ border-color:var(--error); }
+  .field.invalid .field-error{ display:block; }
+
+  button[type=submit]{
+    width:100%; font-family:'Inter', sans-serif; font-weight:600; font-size:15px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:13px 26px; cursor:pointer;
+  }
+  button[type=submit]:hover{ background:var(--forest-dk); }
+  button[type=submit]:disabled{ background:var(--line); cursor:not-allowed; }
+
+  .status-msg{ font-size:14px; margin-top:14px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+  .status-msg.err{ color:var(--error); }
+
+  .config-warning{
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#58B030" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal
+  </div>
+  <h1>Passwort ändern</h1>
+  <p class="sub"><a href="dashboard.html">← Zurück zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+
+  <form id="pwForm" novalidate style="display:none">
+    <div class="field" id="f-altesPasswort">
+      <label for="altesPasswort">Aktuelles Passwort</label>
+      <input type="password" id="altesPasswort" required>
+      <p class="field-error">Bitte aktuelles Passwort angeben.</p>
+    </div>
+    <div class="field" id="f-neuesPasswort">
+      <label for="neuesPasswort">Neues Passwort <span style="font-weight:400; color:var(--ink-soft)">(mind. 6 Zeichen)</span></label>
+      <input type="password" id="neuesPasswort" required>
+      <p class="field-error">Neues Passwort muss mind. 6 Zeichen haben.</p>
+    </div>
+    <div class="field" id="f-neuesPasswortWdh">
+      <label for="neuesPasswortWdh">Neues Passwort wiederholen</label>
+      <input type="password" id="neuesPasswortWdh" required>
+      <p class="field-error">Passwörter stimmen nicht überein.</p>
+    </div>
+    <button type="submit" id="submitBtn">Passwort ändern</button>
+    <p class="status-msg" id="statusMsg"></p>
+  </form>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const pwForm = document.getElementById('pwForm');
+  let db = null, auth = null, aktuellerUser = null;
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      if (!profil || profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box';
+        authGate.textContent = 'Dein Account ist nicht freigeschaltet.';
+        return;
+      }
+      authGate.style.display = 'none';
+      pwForm.style.display = 'block';
+      aktuellerUser = user;
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  function toggleInvalid(id, invalid) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('invalid', invalid);
+  }
+
+  pwForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.className = 'status-msg';
+
+    const altesPasswort = document.getElementById('altesPasswort').value;
+    const neuesPasswort = document.getElementById('neuesPasswort').value;
+    const neuesPasswortWdh = document.getElementById('neuesPasswortWdh').value;
+
+    toggleInvalid('f-altesPasswort', !altesPasswort);
+    toggleInvalid('f-neuesPasswort', neuesPasswort.length < 6);
+    toggleInvalid('f-neuesPasswortWdh', neuesPasswort !== neuesPasswortWdh);
+    if (!altesPasswort || neuesPasswort.length < 6 || neuesPasswort !== neuesPasswortWdh) {
+      statusMsg.textContent = 'Bitte die markierten Felder korrekt ausfüllen.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true; btn.textContent = 'Wird geändert …';
+
+    try {
+      // Aus Sicherheitsgründen verlangt Firebase eine frische Anmeldung, bevor das Passwort geändert werden darf.
+      const credential = firebase.auth.EmailAuthProvider.credential(aktuellerUser.email, altesPasswort);
+      await aktuellerUser.reauthenticateWithCredential(credential);
+      await aktuellerUser.updatePassword(neuesPasswort);
+
+      statusMsg.textContent = 'Passwort erfolgreich geändert.';
+      statusMsg.classList.add('show', 'ok');
+      pwForm.reset();
+    } catch (err) {
+      console.error(err);
+      const meldung = err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential'
+        ? 'Aktuelles Passwort ist falsch.'
+        : 'Fehler: ' + err.message;
+      statusMsg.textContent = meldung;
+      statusMsg.classList.add('show', 'err');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Passwort ändern';
+    }
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>
