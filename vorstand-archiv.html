@@ -172,7 +172,7 @@
     try {
       const doc = await db.collection('users').doc(user.uid).get();
       const profil = doc.exists ? doc.data() : null;
-      if (!profil || !(profil.rollen || []).includes('vorstand') || profil.status !== 'genehmigt') {
+      if (!profil || !((profil.rollen || []).includes('vorstand') || (profil.rollen || []).includes('admin')) || profil.status !== 'genehmigt') {
         authGate.className = 'auth-box err';
         authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für den Vorstand.';
         return;

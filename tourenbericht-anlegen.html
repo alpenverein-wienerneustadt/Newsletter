@@ -6,7 +6,7 @@
 <title>Tourenbericht schreiben – Tourenführer Portal</title>
 
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#3F5A3D">
+<meta name="theme-color" content="#4C9A2A">
 <link rel="icon" href="icon-192.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,15 +15,15 @@
 
 <style>
   :root{
-    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
-    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
     background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
     font-size:16px; line-height:1.5;
-    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
     background-size: 22px 22px;
   }
   .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
@@ -46,10 +46,10 @@
     background:#fff; border:1px solid var(--line); border-radius:3px;
     padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
   }
-  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box.err{ border-color:#F0B4AE; background:#FDECEA; color:#8A2A22; }
   .auth-box a{ color:var(--forest-dk); font-weight:600; }
 
-  form{ background:#fff; border:1px solid var(--line); border-radius:3px; box-shadow:0 1px 0 rgba(34,38,31,0.03); display:none; }
+  form{ background:#fff; border:1px solid var(--line); border-radius:3px; box-shadow:0 1px 0 rgba(42,44,49,0.03); display:none; }
   .section{ padding:26px 26px 8px; border-bottom:1px solid var(--paper-2); }
   .section:last-of-type{ border-bottom:none; }
   .section-title{ font-family:'Fraunces', serif; font-size:18px; font-weight:600; color:var(--forest-dk); margin:0 0 4px; }
@@ -105,7 +105,7 @@
   .status-msg.err{ color:var(--error); }
 
   .config-warning{
-    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
@@ -115,7 +115,7 @@
 
 <div class="page">
   <div class="eyebrow-line">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#58B030" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
     Tourenführer Portal
   </div>
   <h1>Tourenbericht schreiben</h1>
@@ -241,7 +241,7 @@
         return;
       }
       const rollen = profil.rollen || [];
-      const istVorstand = rollen.includes('vorstand');
+      const istVorstand = rollen.includes('vorstand') || rollen.includes('admin');
       if (!istVorstand && !rollen.includes('tourenfuehrer')) {
         authGate.className = 'auth-box err';
         authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für Tourenführer:innen oder den Vorstand.';

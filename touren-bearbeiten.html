@@ -302,7 +302,7 @@
       const doc = await db.collection('users').doc(user.uid).get();
       const profil = doc.exists ? doc.data() : null;
       const rollen = (profil && profil.rollen) || [];
-      const istVorstand = rollen.includes('vorstand');
+      const istVorstand = rollen.includes('vorstand') || rollen.includes('admin');
       if (!profil || profil.status !== 'genehmigt') {
         authGate.className = 'auth-box';
         authGate.textContent = 'Dein Account ist nicht freigeschaltet.';

@@ -273,7 +273,7 @@
       document.getElementById('userBarName').textContent = profil.name || user.email;
 
       const rollen = profil.rollen || [];
-      const istVorstand = rollen.includes('vorstand');
+      const istVorstand = rollen.includes('vorstand') || rollen.includes('admin');
       if (istVorstand || rollen.includes('tourenfuehrer')) {
         document.getElementById('tourenBereich').style.display = 'block';
       }
