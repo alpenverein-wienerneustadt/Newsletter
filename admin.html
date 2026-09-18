@@ -180,7 +180,7 @@
       <div id="listeUebrige">${uebrige.map(cardHtml).join('')}</div>
     `;
 
-    document.querySelectorAll('button.action').forEach(btn => {
+    document.querySelectorAll('button.action[data-status]').forEach(btn => {
       btn.addEventListener('click', () => handleAction(btn.dataset.uid, btn.dataset.status));
     });
   }
