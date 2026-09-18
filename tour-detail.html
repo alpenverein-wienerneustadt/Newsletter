@@ -11,15 +11,15 @@
 
 <style>
   :root{
-    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
-    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
     background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
     font-size:16px; line-height:1.55;
-    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
     background-size: 22px 22px;
   }
   .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
@@ -34,7 +34,7 @@
 
   .meta-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:22px; }
   .tag{ font-size:12px; padding:3px 10px; border-radius:20px; background:var(--paper-2); color:var(--ink-soft); }
-  .tag.schwierigkeit-schwer{ background:#F3E1DB; color:#7A4322; }
+  .tag.schwierigkeit-schwer{ background:#F3E1DB; color:#8A2A22; }
   .tag.schwierigkeit-mittel{ background:#EFE7D0; color:#6B5A24; }
   .tag.schwierigkeit-leicht{ background:#E3EAE0; color:var(--forest-dk); }
 
@@ -91,7 +91,7 @@
 
   .loading, .empty{ text-align:center; color:var(--ink-soft); padding:60px 20px; font-size:14.5px; }
   .config-warning{
-    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
@@ -221,6 +221,11 @@
       <div class="block">
         <h2>Tourenführer:in</h2>
         <p>${escapeHtml(tour.erstelltVon)}</p>
+        <p>
+          ${tour.kontaktTelefon ? `Tel.: <a href="tel:${escapeHtml(tour.kontaktTelefon)}" style="color:var(--forest-dk);">${escapeHtml(tour.kontaktTelefon)}</a><br>` : ''}
+          ${tour.kontaktEmail ? `E-Mail: <a href="mailto:${escapeHtml(tour.kontaktEmail)}" style="color:var(--forest-dk);">${escapeHtml(tour.kontaktEmail)}</a><br>` : ''}
+          ${tour.kontaktWhatsapp ? `WhatsApp: <a href="https://wa.me/${escapeHtml(tour.kontaktWhatsapp.replace(/[^0-9+]/g, ''))}" target="_blank" rel="noopener" style="color:var(--forest-dk);">${escapeHtml(tour.kontaktWhatsapp)}</a>` : ''}
+        </p>
       </div>
 
       <div class="anmelde-box">
