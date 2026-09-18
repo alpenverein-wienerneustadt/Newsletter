@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tour ausschreiben – Tourenführer Portal</title>
 
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F5A3D">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tour anlegen">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -304,7 +312,7 @@
 
   <div id="userBar" class="user-bar" style="display:none">
     <span>Angemeldet als <strong id="userBarName"></strong></span>
-    <a href="#" id="logoutLink">Abmelden</a>
+    <span><a href="dashboard.html">Zur Übersicht</a> · <a href="#" id="logoutLink">Abmelden</a></span>
   </div>
 
   <form id="tourForm" novalidate style="display:none">
@@ -611,6 +619,14 @@
       submitBtn.textContent = 'Tour veröffentlichen';
     }
   });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 </script>
 
 </body>

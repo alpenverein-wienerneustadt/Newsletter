@@ -101,6 +101,17 @@
 
   footer.note{ margin-top:36px; font-size:12.5px; color:var(--ink-soft); text-align:center; }
 
+  .content-section{ margin: 30px 0; }
+  .content-section .group-title{
+    font-family:'Fraunces', serif; font-size:19px; font-weight:600; color:var(--forest-dk); margin:0 0 12px;
+  }
+  .content-card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:16px 20px; margin-bottom:10px;
+  }
+  .content-card .titel{ font-family:'Fraunces', serif; font-weight:600; font-size:16px; color:var(--forest-dk); margin:0 0 4px; }
+  .content-card .meta{ font-size:12.5px; color:var(--trail); margin:0 0 6px; }
+  .content-card .text{ font-size:14px; color:var(--ink); white-space:pre-line; margin:0; }
+
   .config-warning{
     background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
@@ -122,14 +133,17 @@
     </div>
     <h1>Aktuelle Touren</h1>
     <p class="sub">Alle ausgeschriebenen Touren auf einen Blick. Anmeldung direkt bei der jeweiligen Tour.</p>
-    <nav class="top">
-      <a href="tour-anlegen.html">Tour ausschreiben</a>
+    <nav class="top" id="navLinks">
+      <a href="login.html">Login für Tourenführer</a>
     </nav>
   </header>
 
   <div class="config-warning" id="configWarning">
     Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
   </div>
+
+  <div id="aktuelleInfosSection"></div>
+  <div id="veranstaltungenSection"></div>
 
   <div class="filters" id="filters">
     <button class="filter-btn active" data-filter="alle">Alle</button>
@@ -146,11 +160,16 @@
     <p class="loading">Touren werden geladen …</p>
   </div>
 
+  <div id="kurseSection"></div>
+  <div id="infoAllgemeinSection"></div>
+
   <footer class="note">Nur Touren mit Status „geplant" werden angezeigt.</footer>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
 
 <script>
   // TODO: gleiche Config wie in tour-anlegen.html eintragen
@@ -175,6 +194,92 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     ladeTouren(db);
+    initNav(db);
+    ladeAktuelleInfos(db);
+    ladeVeranstaltungen(db);
+    ladeKurse(db);
+    ladeAllgemeineInfos(db);
+  }
+
+  function formatDatumLang(iso) {
+    if (!iso) return '';
+    const [j, m, t] = iso.split('-');
+    return `${t}.${m}.${j}`;
+  }
+
+  async function ladeAktuelleInfos(db) {
+    const el = document.getElementById('aktuelleInfosSection');
+    try {
+      const snap = await db.collection('infosAktuell').orderBy('erstelltAm', 'desc').limit(10).get();
+      if (snap.empty) return;
+      el.innerHTML = `<div class="content-section"><p class="group-title">Aktuelles</p>` +
+        snap.docs.map(d => {
+          const i = d.data();
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p></div>`;
+        }).join('') + `</div>`;
+    } catch (err) { console.error(err); }
+  }
+
+  async function ladeVeranstaltungen(db) {
+    const el = document.getElementById('veranstaltungenSection');
+    try {
+      const snap = await db.collection('veranstaltungen').orderBy('erstelltAm', 'desc').get();
+      if (snap.empty) return;
+      el.innerHTML = `<div class="content-section"><p class="group-title">Veranstaltungen</p>` +
+        snap.docs.map(d => {
+          const v = d.data();
+          const meta = [v.datum ? formatDatumLang(v.datum) : null, v.ort].filter(Boolean).join(' · ');
+          return `<div class="content-card"><p class="titel">${escapeHtml(v.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(v.beschreibung)}</p></div>`;
+        }).join('') + `</div>`;
+    } catch (err) { console.error(err); }
+  }
+
+  async function ladeKurse(db) {
+    const el = document.getElementById('kurseSection');
+    try {
+      const snap = await db.collection('kurse').orderBy('erstelltAm', 'desc').get();
+      if (snap.empty) return;
+      el.innerHTML = `<div class="content-section"><p class="group-title">Kurse</p>` +
+        snap.docs.map(d => {
+          const k = d.data();
+          const meta = [k.datum ? formatDatumLang(k.datum) : null, k.ort, k.mindestalter ? `ab ${k.mindestalter} Jahren` : null].filter(Boolean).join(' · ');
+          return `<div class="content-card"><p class="titel">${escapeHtml(k.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(k.beschreibung)}</p></div>`;
+        }).join('') + `</div>`;
+    } catch (err) { console.error(err); }
+  }
+
+  async function ladeAllgemeineInfos(db) {
+    const el = document.getElementById('infoAllgemeinSection');
+    try {
+      const snap = await db.collection('infosAllgemein').orderBy('erstelltAm', 'desc').get();
+      if (snap.empty) return;
+      el.innerHTML = `<div class="content-section"><p class="group-title">Allgemeine Infos</p>` +
+        snap.docs.map(d => {
+          const i = d.data();
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p></div>`;
+        }).join('') + `</div>`;
+    } catch (err) { console.error(err); }
+  }
+
+  async function initNav(db) {
+    const nav = document.getElementById('navLinks');
+    firebase.auth().onAuthStateChanged(async (user) => {
+      if (!user) {
+        nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+        return;
+      }
+      try {
+        const doc = await db.collection('users').doc(user.uid).get();
+        const profil = doc.exists ? doc.data() : null;
+        if (profil && profil.status === 'genehmigt') {
+          nav.innerHTML = '<a href="dashboard.html">Zur Übersicht</a>';
+        } else {
+          nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+        }
+      } catch (err) {
+        nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+      }
+    });
   }
 
   const DISZIPLIN_LABEL = {

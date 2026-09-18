@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Übersicht – Tourenführer Portal</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F5A3D">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Tour anlegen">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
+    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 6px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+
+  .user-bar{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13.5px; color:var(--ink-soft); margin:20px 0 8px;
+  }
+  .user-bar a{ color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); }
+  .user-bar a:hover{ color:var(--forest-dk); border-color:var(--forest); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  .group-title{
+    font-family:'Fraunces', serif; font-size:17px; font-weight:600; color:var(--forest-dk);
+    margin: 30px 0 12px;
+  }
+
+  .tile-grid{ display:flex; flex-direction:column; gap:10px; }
+
+  .tile{
+    display:flex; justify-content:space-between; align-items:center; gap:14px;
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:16px 18px; text-decoration:none; color:inherit;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  a.tile:hover{ border-color:var(--forest); transform: translateX(2px); }
+
+  .tile-title{ font-weight:600; font-size:14.5px; margin:0 0 2px; }
+  .tile-desc{ font-size:12.5px; color:var(--ink-soft); margin:0; }
+  .tile-arrow{ color:var(--trail); font-size:18px; flex-shrink:0; }
+
+  .tile.disabled{ opacity:0.55; cursor:default; }
+  .tile.disabled .tile-arrow{ display:none; }
+  .badge-soon{
+    font-size:11px; padding:3px 9px; border-radius:20px;
+    background:var(--paper-2); color:var(--ink-soft); flex-shrink:0;
+  }
+
+  .config-warning{
+    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+
+  #dashboardContent{ display:none; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal
+  </div>
+  <h1>Übersicht</h1>
+  <p class="sub">Alles, was du hier tun kannst.</p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box">
+    <p>Anmeldestatus wird geprüft …</p>
+  </div>
+
+  <div id="dashboardContent">
+    <div class="user-bar">
+      <span>Angemeldet als <strong id="userBarName"></strong></span>
+      <a href="#" id="logoutLink">Abmelden</a>
+    </div>
+
+    <p class="group-title">Touren &amp; Berichte</p>
+    <div class="tile-grid">
+      <a class="tile" href="tour-anlegen.html">
+        <div>
+          <p class="tile-title">Tour ausschreiben</p>
+          <p class="tile-desc">Neue Tour mit Anmeldefunktion anlegen</p>
+        </div>
+        <span class="tile-arrow">→</span>
+      </a>
+      <a class="tile" href="tourenbericht-anlegen.html">
+        <div>
+          <p class="tile-title">Tourenbericht schreiben</p>
+          <p class="tile-desc">Bericht + Fotos zu einer durchgeführten Tour</p>
+        </div>
+        <span class="tile-arrow">→</span>
+      </a>
+    </div>
+
+    <div id="vorstandBereich" style="display:none">
+      <p class="group-title">Vorstand</p>
+      <div class="tile-grid">
+        <a class="tile" href="admin.html">
+          <div>
+            <p class="tile-title">Tourenführer verwalten</p>
+            <p class="tile-desc">Accounts freischalten oder sperren</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="touren-bearbeiten.html">
+          <div>
+            <p class="tile-title">Bestehende Touren bearbeiten</p>
+            <p class="tile-desc">Eckdaten ändern oder Tour absagen</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="vorstand-inhalte.html">
+          <div>
+            <p class="tile-title">Veranstaltung erstellen</p>
+            <p class="tile-desc">Öffentlich sichtbare Vereins-Veranstaltung</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="vorstand-inhalte.html">
+          <div>
+            <p class="tile-title">Kurs erstellen</p>
+            <p class="tile-desc">Mit Mindestalter und Teilnehmerzahl</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="vorstand-inhalte.html">
+          <div>
+            <p class="tile-title">Allgemeine Infos verwalten</p>
+            <p class="tile-desc">Dauerhafte Vereinsinfos bearbeiten</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="vorstand-inhalte.html">
+          <div>
+            <p class="tile-title">Aktuelle Infos eingeben</p>
+            <p class="tile-desc">Kurzmeldungen für Newsletter &amp; Website</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // TODO: gleiche Config wie in den anderen Dateien eintragen
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const dashboardContent = document.getElementById('dashboardContent');
+  let db = null, auth = null;
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+    document.getElementById('logoutLink').addEventListener('click', (e) => {
+      e.preventDefault();
+      auth.signOut().then(() => location.reload());
+    });
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+
+      if (!profil) {
+        authGate.className = 'auth-box err';
+        authGate.innerHTML = 'Kein Profil gefunden. Bitte über <a href="login.html">die Registrierung</a> neu anmelden.';
+        return;
+      }
+      if (profil.status === 'gesperrt') {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Dein Zugang wurde gesperrt. Bitte wende dich an den Vorstand.';
+        return;
+      }
+      if (profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box';
+        authGate.textContent = 'Dein Account wartet noch auf Freischaltung durch den Vorstand.';
+        return;
+      }
+
+      authGate.style.display = 'none';
+      dashboardContent.style.display = 'block';
+      document.getElementById('userBarName').textContent = profil.name || user.email;
+      if (profil.rolle === 'vorstand') {
+        document.getElementById('vorstandBereich').style.display = 'block';
+      }
+    } catch (err) {
+      console.error(err);
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler beim Prüfen des Zugriffs: ' + err.message;
+    }
+  }
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>

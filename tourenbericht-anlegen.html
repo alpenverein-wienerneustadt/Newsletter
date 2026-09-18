@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tourenbericht schreiben – Tourenführer Portal</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#3F5A3D">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
+    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 8px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .user-bar{
+    display:flex; justify-content:space-between; align-items:center;
+    font-size:13.5px; color:var(--ink-soft); margin:20px 0 16px;
+  }
+  .user-bar a{ color:var(--ink-soft); text-decoration:none; border-bottom:1px solid var(--line); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  form{ background:#fff; border:1px solid var(--line); border-radius:3px; box-shadow:0 1px 0 rgba(34,38,31,0.03); display:none; }
+  .section{ padding:26px 26px 8px; border-bottom:1px solid var(--paper-2); }
+  .section:last-of-type{ border-bottom:none; }
+  .section-title{ font-family:'Fraunces', serif; font-size:18px; font-weight:600; color:var(--forest-dk); margin:0 0 4px; }
+  .section-hint{ color:var(--ink-soft); font-size:13.5px; margin:0 0 20px; }
+
+  .field{ margin-bottom:20px; }
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:520px){ .row{ grid-template-columns:1fr; } }
+
+  label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; }
+  label .opt{ font-weight:400; color:var(--ink-soft); }
+
+  input[type=text], input[type=date], input[type=number], select, textarea{
+    width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:11px 12px;
+  }
+  textarea{ resize:vertical; min-height:90px; }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--forest); background:#fff; }
+
+  .field-error{ display:none; font-size:12.5px; color:var(--error); margin-top:5px; }
+  .field.invalid input, .field.invalid select, .field.invalid textarea{ border-color:var(--error); }
+  .field.invalid .field-error{ display:block; }
+
+  .foto-slot{
+    border:1px dashed var(--line); border-radius:3px; padding:14px; margin-bottom:14px;
+    display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .foto-slot.titelbild{ border-style:solid; border-color:var(--trail); }
+  .foto-preview{
+    width:88px; height:88px; border-radius:2px; background:var(--paper-2);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
+  }
+  .foto-preview img{ width:100%; height:100%; object-fit:cover; }
+  .foto-preview span{ font-size:11px; color:var(--ink-soft); text-align:center; padding:4px; }
+  .foto-fields{ flex:1; min-width:180px; }
+  .foto-fields input[type=file]{ font-size:13px; margin-bottom:8px; }
+  .foto-fields textarea{ min-height:50px; font-size:13.5px; }
+  .foto-label{ font-size:12px; color:var(--trail); font-weight:600; margin:0 0 6px; }
+  .upload-status{ font-size:12px; color:var(--ink-soft); margin-top:4px; }
+  .upload-status.err{ color:var(--error); }
+
+  .actions{ padding:24px 26px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  button[type=submit]{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:15px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:13px 26px; cursor:pointer;
+  }
+  button[type=submit]:hover{ background:var(--forest-dk); }
+  button[type=submit]:disabled{ background:var(--line); cursor:not-allowed; }
+
+  .status-msg{ font-size:14px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+  .status-msg.err{ color:var(--error); }
+
+  .config-warning{
+    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal
+  </div>
+  <h1>Tourenbericht schreiben</h1>
+  <p class="sub">Wähle deine Tour aus und trag Eindrücke sowie Fotos ein. <a href="dashboard.html">← Zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+  <div class="config-warning" id="cloudinaryWarning">
+    Cloudinary ist noch nicht konfiguriert. Trag <code>CLOUDINARY_CLOUD_NAME</code> und <code>CLOUDINARY_UPLOAD_PRESET</code>
+    im Script-Block ein, sonst können keine Fotos hochgeladen werden (der restliche Bericht funktioniert trotzdem).
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+  <div id="userBar" class="user-bar" style="display:none">
+    <span>Angemeldet als <strong id="userBarName"></strong></span>
+    <a href="#" id="logoutLink">Abmelden</a>
+  </div>
+
+  <form id="berichtForm" novalidate>
+    <div class="section">
+      <p class="section-title">Tour &amp; Rahmendaten</p>
+      <p class="section-hint">Wähle die durchgeführte Tour – Titel und Datum werden übernommen.</p>
+
+      <div class="field" id="f-tourId">
+        <label for="tourId">Tour</label>
+        <select id="tourId" required>
+          <option value="" disabled selected>Wird geladen …</option>
+        </select>
+        <p class="field-error">Bitte eine Tour auswählen.</p>
+      </div>
+
+      <div class="row">
+        <div class="field" id="f-wetter">
+          <label for="wetter">Wetter</label>
+          <input type="text" id="wetter" placeholder="z. B. sonnig, leichter Wind">
+        </div>
+        <div class="field" id="f-teilnehmerzahl">
+          <label for="teilnehmerzahl">Teilnehmerzahl</label>
+          <input type="number" id="teilnehmerzahl" min="0" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Erzählung</p>
+      <p class="section-hint">Wie ist die Tour gelaufen?</p>
+      <div class="field" id="f-beschreibung">
+        <label for="beschreibung">Beschreibung</label>
+        <textarea id="beschreibung" style="min-height:160px" required></textarea>
+        <p class="field-error">Bitte eine Beschreibung eingeben.</p>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Fotos</p>
+      <p class="section-hint">Bis zu 5 Fotos, das erste dient als Titelbild. Alle optional.</p>
+      <div id="fotoSlots"></div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submitBtn">Bericht veröffentlichen</button>
+      <p class="status-msg" id="statusMsg"></p>
+    </div>
+  </form>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  // TODO: gleiche Config wie in den anderen Dateien eintragen
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  // TODO: Cloudinary-Zugangsdaten eintragen (console.cloudinary.com → Dashboard, plus
+  // ein "Unsigned Upload Preset" unter Settings → Upload)
+  const CLOUDINARY_CLOUD_NAME = "yeihm0g5";
+  const CLOUDINARY_UPLOAD_PRESET = "ml_default";
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const cloudinaryConfigured = CLOUDINARY_CLOUD_NAME !== "DEIN_CLOUD_NAME";
+  let db = null, auth = null, aktuellerUser = null;
+
+  const authGate = document.getElementById('authGate');
+  const userBar = document.getElementById('userBar');
+  const form = document.getElementById('berichtForm');
+
+  if (!cloudinaryConfigured) document.getElementById('cloudinaryWarning').classList.add('show');
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+    document.getElementById('logoutLink').addEventListener('click', (e) => { e.preventDefault(); auth.signOut(); });
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      if (!profil || profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box';
+        authGate.textContent = profil && profil.status === 'gesperrt'
+          ? 'Dein Zugang wurde gesperrt.'
+          : 'Dein Account wartet noch auf Freischaltung durch den Vorstand.';
+        return;
+      }
+      authGate.style.display = 'none';
+      userBar.style.display = 'flex';
+      form.style.display = 'block';
+      document.getElementById('userBarName').textContent = profil.name || user.email;
+      aktuellerUser = { uid: user.uid, name: profil.name || user.email, istVorstand: profil.rolle === 'vorstand' };
+      ladeTouren();
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  async function ladeTouren() {
+    const select = document.getElementById('tourId');
+    try {
+      let query = db.collection('touren').orderBy('datum', 'desc');
+      if (!aktuellerUser.istVorstand) {
+        query = db.collection('touren').where('erstelltVonUid', '==', aktuellerUser.uid);
+      }
+      const snap = await query.get();
+      if (snap.empty) {
+        select.innerHTML = '<option value="" disabled selected>Keine Touren gefunden</option>';
+        return;
+      }
+      let touren = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!aktuellerUser.istVorstand) touren.sort((a, b) => (b.datum || '').localeCompare(a.datum || ''));
+      select.innerHTML = '<option value="" disabled selected>Bitte wählen</option>' +
+        touren.map(t => `<option value="${t.id}" data-titel="${escapeAttr(t.titel)}">${escapeAttr(t.titel)} (${t.datum})</option>`).join('');
+    } catch (err) {
+      select.innerHTML = '<option value="" disabled selected>Fehler beim Laden</option>';
+      console.error(err);
+    }
+  }
+
+  function escapeAttr(str) { return (str || '').replace(/"/g, '&quot;'); }
+  function toggleInvalid(id, invalid) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('invalid', invalid);
+  }
+
+  // --- Foto-Slots ---
+  const fotoUrls = [null, null, null, null, null];
+  const slotsContainer = document.getElementById('fotoSlots');
+  let slotsHtml = '';
+  for (let i = 0; i < 5; i++) {
+    slotsHtml += `
+      <div class="foto-slot${i === 0 ? ' titelbild' : ''}">
+        <div class="foto-preview" id="preview-${i}"><span>${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)}</span></div>
+        <div class="foto-fields">
+          <p class="foto-label">${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)} <span style="font-weight:400;color:var(--ink-soft)">(optional)</span></p>
+          <input type="file" accept="image/*" data-slot="${i}" class="foto-input">
+          <div class="upload-status" id="uploadStatus-${i}"></div>
+          <textarea placeholder="Bildbeschreibung" id="fotoBeschreibung-${i}"></textarea>
+        </div>
+      </div>`;
+  }
+  slotsContainer.innerHTML = slotsHtml;
+
+  document.querySelectorAll('.foto-input').forEach(input => {
+    input.addEventListener('change', (e) => uploadFoto(e.target, parseInt(e.target.dataset.slot, 10)));
+  });
+
+  async function uploadFoto(input, slot) {
+    const file = input.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById(`uploadStatus-${slot}`);
+    statusEl.className = 'upload-status';
+
+    if (!cloudinaryConfigured) {
+      statusEl.textContent = 'Cloudinary nicht konfiguriert – siehe Hinweis oben.';
+      statusEl.classList.add('err');
+      input.value = '';
+      return;
+    }
+
+    statusEl.textContent = 'Wird hochgeladen …';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST', body: formData
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || 'Upload fehlgeschlagen');
+
+      fotoUrls[slot] = json.secure_url;
+      document.getElementById(`preview-${slot}`).innerHTML = `<img src="${json.secure_url}" alt="">`;
+      statusEl.textContent = 'Hochgeladen.';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Fehler: ' + err.message;
+      statusEl.classList.add('err');
+    }
+  }
+
+  // --- Speichern ---
+  const submitBtn = document.getElementById('submitBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusMsg.className = 'status-msg';
+
+    const tourSelect = document.getElementById('tourId');
+    const beschreibung = document.getElementById('beschreibung').value.trim();
+
+    let valid = true;
+    toggleInvalid('f-tourId', !tourSelect.value);
+    toggleInvalid('f-beschreibung', !beschreibung);
+    if (!tourSelect.value || !beschreibung) valid = false;
+
+    if (!valid) {
+      statusMsg.textContent = 'Bitte die markierten Felder ausfüllen.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
+    const fotos = [];
+    for (let i = 0; i < 5; i++) {
+      if (fotoUrls[i]) {
+        fotos.push({ url: fotoUrls[i], beschreibung: document.getElementById(`fotoBeschreibung-${i}`).value.trim() || null });
+      }
+    }
+
+    const selectedOption = tourSelect.options[tourSelect.selectedIndex];
+
+    const data = {
+      tourId: tourSelect.value,
+      tourTitel: selectedOption.dataset.titel,
+      wetter: document.getElementById('wetter').value.trim() || null,
+      teilnehmerzahl: document.getElementById('teilnehmerzahl').value ? Number(document.getElementById('teilnehmerzahl').value) : null,
+      beschreibung,
+      fotos,
+      erstelltVon: aktuellerUser.name,
+      erstelltVonUid: aktuellerUser.uid,
+      erstelltAm: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Speichere …';
+
+    try {
+      await db.collection('berichte').add(data);
+      statusMsg.textContent = 'Bericht gespeichert.';
+      statusMsg.classList.add('show', 'ok');
+      form.reset();
+      for (let i = 0; i < 5; i++) {
+        fotoUrls[i] = null;
+        document.getElementById(`preview-${i}`).innerHTML = `<span>${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)}</span>`;
+        document.getElementById(`uploadStatus-${i}`).textContent = '';
+      }
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler beim Speichern: ' + err.message;
+      statusMsg.classList.add('show', 'err');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Bericht veröffentlichen';
+    }
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>

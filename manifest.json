@@ -1,0 +1,31 @@
+{
+  "name": "Tourenführer Portal – Tour anlegen",
+  "short_name": "Tour anlegen",
+  "description": "Touren ausschreiben für Tourenführer des Alpenvereins Wiener Neustadt",
+  "start_url": "dashboard.html",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#F4F2EA",
+  "theme_color": "#3F5A3D",
+  "lang": "de",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
