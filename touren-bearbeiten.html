@@ -113,7 +113,7 @@
     Tourenführer Portal
   </div>
   <h1 id="pageTitle">Touren bearbeiten</h1>
-  <p class="sub" id="pageSub">Wähle eine Tour aus, um sie zu bearbeiten. <a href="dashboard.html">← Zur Übersicht</a></p>
+  <p class="sub" id="pageSub">Wähle eine Tour aus, um sie zu bearbeiten. Vergangene Touren findest du im <a href="vorstand-archiv.html">Archiv</a>. <a href="dashboard.html">← Zur Übersicht</a></p>
 
   <div class="config-warning" id="configWarning">
     Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
@@ -281,13 +281,20 @@
     try {
       const doc = await db.collection('users').doc(user.uid).get();
       const profil = doc.exists ? doc.data() : null;
+      const rollen = (profil && profil.rollen) || [];
+      const istVorstand = rollen.includes('vorstand');
       if (!profil || profil.status !== 'genehmigt') {
         authGate.className = 'auth-box';
         authGate.textContent = 'Dein Account ist nicht freigeschaltet.';
         return;
       }
+      if (!istVorstand && !rollen.includes('tourenfuehrer')) {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für Tourenführer:innen oder den Vorstand.';
+        return;
+      }
       authGate.style.display = 'none';
-      aktuellerUser = { uid: user.uid, istVorstand: profil.rolle === 'vorstand' };
+      aktuellerUser = { uid: user.uid, istVorstand };
 
       if (tourId) {
         ladeEinzelneTour(tourId);
@@ -309,7 +316,8 @@
         : db.collection('touren').where('erstelltVonUid', '==', aktuellerUser.uid);
 
       const snap = await query.get();
-      let touren = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const heute = new Date().toISOString().slice(0, 10);
+      let touren = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.datum >= heute);
       if (!aktuellerUser.istVorstand) touren.sort((a, b) => (b.datum || '').localeCompare(a.datum || ''));
 
       if (!touren.length) {

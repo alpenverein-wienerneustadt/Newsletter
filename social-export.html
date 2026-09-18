@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Social-Media-Export – Tourenführer Portal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
+    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 8px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  .tabs{ display:flex; gap:4px; margin:24px 0 0; }
+  .tab{
+    flex:1; text-align:center; font-size:14px; font-weight:600; color:var(--ink-soft);
+    background:var(--paper-2); border:1px solid var(--line); border-bottom:none;
+    padding:11px; cursor:pointer; border-radius:3px 3px 0 0;
+  }
+  .tab.active{ background:#fff; color:var(--forest-dk); }
+
+  .panel{ background:#fff; border:1px solid var(--line); border-radius:0 0 3px 3px; padding:24px; display:none; }
+  .panel.active{ display:block; }
+
+  label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; }
+  select{
+    width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:11px 12px;
+    margin-bottom:20px;
+  }
+
+  .vorschau{ display:none; }
+  .block-label{ font-size:12px; color:var(--trail); font-weight:600; margin:0 0 6px; }
+  textarea.export-text{
+    width:100%; min-height:160px; font-family:inherit; font-size:14px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:12px;
+    resize:vertical;
+  }
+
+  button.aktion{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:14px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:11px 20px; cursor:pointer;
+    margin-top:10px; margin-right:10px;
+  }
+  button.aktion:hover{ background:var(--forest-dk); }
+  button.aktion.sekundaer{ background:#fff; color:var(--forest-dk); border:1px solid var(--forest); }
+  button.aktion.sekundaer:hover{ background:var(--paper-2); }
+
+  .foto-grid{ display:flex; flex-wrap:wrap; gap:12px; margin-top:14px; }
+  .foto-karte{ width:140px; }
+  .foto-karte img{ width:140px; height:140px; object-fit:cover; border-radius:2px; border:1px solid var(--line); display:block; }
+  .foto-karte button{
+    width:100%; margin-top:6px; font-family:'Inter', sans-serif; font-size:12px; font-weight:600;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink); border-radius:2px; padding:7px; cursor:pointer;
+  }
+  .foto-karte button:hover{ border-color:var(--forest); color:var(--forest-dk); }
+
+  .status-msg{ font-size:13px; margin-top:10px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+
+  .config-warning{
+    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+
+  .crop-modal{
+    position:fixed; inset:0; background:rgba(34,38,31,0.72); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:16px;
+  }
+  .crop-modal.show{ display:flex; }
+  .crop-modal-inner{
+    background:#fff; border-radius:4px; padding:20px; max-width:560px; width:100%;
+    max-height:90vh; overflow:auto;
+  }
+  .crop-modal h3{ font-family:'Fraunces', serif; font-size:17px; color:var(--forest-dk); margin:0 0 14px; }
+  .crop-image-wrap{ max-height:50vh; background:#000; }
+  .crop-image-wrap img{ display:block; max-width:100%; }
+  .crop-controls{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
+  .crop-controls select{
+    font-family:inherit; font-size:13.5px; padding:8px 10px; border:1px solid var(--line); border-radius:2px; background:var(--paper);
+  }
+  .crop-buttons{ display:flex; gap:8px; }
+  .crop-buttons button{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:13.5px; border-radius:2px; padding:9px 16px; cursor:pointer;
+  }
+  #cropAbbrechen{ background:#fff; border:1px solid var(--line); color:var(--ink); }
+  #cropUebernehmen{ background:var(--forest); border:1px solid var(--forest); color:#fff; }
+  #cropUebernehmen:hover{ background:var(--forest-dk); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal · Vorstand
+  </div>
+  <h1>Social-Media-Export</h1>
+  <p class="sub">Fertiger Post-Text + Bilder zum Download. <a href="dashboard.html">← Zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+
+  <div id="content" style="display:none">
+    <div class="tabs">
+      <div class="tab active" data-tab="veranstaltung">Veranstaltung</div>
+      <div class="tab" data-tab="bericht">Tourenbericht</div>
+    </div>
+
+    <div class="panel active" id="panel-veranstaltung">
+      <label for="auswahl-veranstaltung">Veranstaltung auswählen</label>
+      <select id="auswahl-veranstaltung"><option>Wird geladen …</option></select>
+      <div class="vorschau" id="vorschau-veranstaltung"></div>
+    </div>
+
+    <div class="panel" id="panel-bericht">
+      <label for="auswahl-bericht">Tourenbericht auswählen</label>
+      <select id="auswahl-bericht"><option>Wird geladen …</option></select>
+      <div class="vorschau" id="vorschau-bericht"></div>
+    </div>
+  </div>
+</div>
+
+<div class="crop-modal" id="cropModal">
+  <div class="crop-modal-inner">
+    <h3>Foto für Social Media zuschneiden</h3>
+    <div class="crop-image-wrap"><img id="cropImage" alt=""></div>
+    <div class="crop-controls">
+      <select id="cropAspect">
+        <option value="1">Quadratisch (Instagram-Post)</option>
+        <option value="0.8">Hochformat 4:5 (Instagram)</option>
+        <option value="1.91">Querformat (Facebook)</option>
+        <option value="free">Frei / Original</option>
+      </select>
+      <div class="crop-buttons">
+        <button type="button" id="cropAbbrechen">Abbrechen</button>
+        <button type="button" id="cropUebernehmen">Herunterladen</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const content = document.getElementById('content');
+  let db = null, auth = null;
+
+  const SITE_URL = 'https://alpenverein-wienerneustadt.github.io/Newsletter/';
+
+  let veranstaltungen = [];
+  let berichte = [];
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      if (!profil || profil.status !== 'genehmigt' || !((profil.rollen || []).includes('social-media') || (profil.rollen || []).includes('vorstand'))) {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für die Rolle „Social Media" oder den Vorstand. Falls du dich noch nicht dafür registriert hast oder auf Freischaltung wartest, wende dich an den Vorstand.';
+        return;
+      }
+      authGate.style.display = 'none';
+      content.style.display = 'block';
+      ladeVeranstaltungen();
+      ladeBerichte();
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+  function formatDatum(iso) {
+    if (!iso) return '';
+    const [j, m, t] = iso.split('-');
+    return `${t}.${m}.${j}`;
+  }
+  function slug(str) {
+    return (str || 'bild').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // --- Zuschnitt-Dialog ---
+  let cropperInstanz = null;
+  let cropperDateiname = null;
+  const cropModal = document.getElementById('cropModal');
+  const cropImage = document.getElementById('cropImage');
+
+  function oeffneZuschnitt(url, dateiname) {
+    cropperDateiname = dateiname;
+    cropImage.src = url;
+    cropModal.classList.add('show');
+
+    const starte = () => {
+      if (cropperInstanz) cropperInstanz.destroy();
+      cropperInstanz = new Cropper(cropImage, {
+        aspectRatio: 1,
+        viewMode: 1,
+        autoCropArea: 1,
+        background: false
+      });
+    };
+    if (cropImage.complete) starte(); else cropImage.onload = starte;
+  }
+
+  document.getElementById('cropAspect').addEventListener('change', (e) => {
+    if (!cropperInstanz) return;
+    const val = e.target.value;
+    cropperInstanz.setAspectRatio(val === 'free' ? NaN : parseFloat(val));
+  });
+
+  document.getElementById('cropAbbrechen').addEventListener('click', () => {
+    if (cropperInstanz) { cropperInstanz.destroy(); cropperInstanz = null; }
+    cropModal.classList.remove('show');
+  });
+
+  document.getElementById('cropUebernehmen').addEventListener('click', () => {
+    if (!cropperInstanz) return;
+    const canvas = cropperInstanz.getCroppedCanvas({ maxWidth: 2048, maxHeight: 2048, imageSmoothingQuality: 'high' });
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl; a.download = cropperDateiname || 'foto.jpg';
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(objectUrl);
+
+      cropperInstanz.destroy(); cropperInstanz = null;
+      cropModal.classList.remove('show');
+    }, 'image/jpeg', 0.9);
+  });
+
+  function fotoHerunterladen(url, dateiname) {
+    // Für den Zuschnitt braucht Cropper.js CORS-Zugriff aufs Bild – Cloudinary liefert das mit.
+    cropImage.crossOrigin = 'anonymous';
+    oeffneZuschnitt(url, dateiname);
+  }
+
+  function fotoGridHtml(fotos, dateiPrefix) {
+    if (!fotos || !fotos.length) return '<p style="font-size:13px;color:var(--ink-soft)">Keine Fotos vorhanden.</p>';
+    return `<div class="foto-grid">` + fotos.map((f, i) => `
+      <div class="foto-karte">
+        <img src="${f.url}" alt="">
+        <button type="button" data-foto-url="${f.url}" data-foto-name="${dateiPrefix}-${i + 1}.jpg">Zuschneiden &amp; laden</button>
+      </div>`).join('') + `</div>`;
+  }
+
+  // ---------- Veranstaltungen ----------
+  async function ladeVeranstaltungen() {
+    const select = document.getElementById('auswahl-veranstaltung');
+    try {
+      const snap = await db.collection('veranstaltungen').orderBy('erstelltAm', 'desc').get();
+      veranstaltungen = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!veranstaltungen.length) {
+        select.innerHTML = '<option>Keine Veranstaltungen vorhanden</option>';
+        return;
+      }
+      select.innerHTML = '<option value="" disabled selected>Bitte wählen</option>' +
+        veranstaltungen.map(v => `<option value="${v.id}">${escapeHtml(v.titel)}${v.datum ? ' – ' + formatDatum(v.datum) : ''}</option>`).join('');
+    } catch (err) {
+      select.innerHTML = '<option>Fehler beim Laden</option>';
+      console.error(err);
+    }
+  }
+
+  document.getElementById('auswahl-veranstaltung').addEventListener('change', (e) => {
+    const v = veranstaltungen.find(x => x.id === e.target.value);
+    const vorschau = document.getElementById('vorschau-veranstaltung');
+    if (!v) { vorschau.style.display = 'none'; return; }
+
+    const metaZeile = [v.datum ? formatDatum(v.datum) : null, v.ort].filter(Boolean).join(' · ');
+    const text = `📅 ${v.titel}${metaZeile ? '\n' + metaZeile : ''}\n\n${v.beschreibung}\n\nMehr Infos: ${SITE_URL}`;
+
+    vorschau.innerHTML = `
+      <p class="block-label">Post-Text</p>
+      <textarea class="export-text" id="text-veranstaltung" readonly>${text}</textarea>
+      <button class="aktion" id="btnKopierenVeranstaltung">Text kopieren</button>
+      <p class="status-msg" id="statusVeranstaltung"></p>
+      <p class="block-label" style="margin-top:20px">Fotos</p>
+      ${fotoGridHtml(v.fotos, slug(v.titel))}
+    `;
+    vorschau.style.display = 'block';
+
+    document.getElementById('btnKopierenVeranstaltung').addEventListener('click', () => kopiere('text-veranstaltung', 'statusVeranstaltung'));
+    vorschau.querySelectorAll('[data-foto-url]').forEach(btn => {
+      btn.addEventListener('click', () => fotoHerunterladen(btn.dataset.fotoUrl, btn.dataset.fotoName));
+    });
+  });
+
+  // ---------- Tourenberichte ----------
+  async function ladeBerichte() {
+    const select = document.getElementById('auswahl-bericht');
+    try {
+      const snap = await db.collection('berichte').orderBy('erstelltAm', 'desc').get();
+      berichte = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      if (!berichte.length) {
+        select.innerHTML = '<option>Keine Tourenberichte vorhanden</option>';
+        return;
+      }
+      select.innerHTML = '<option value="" disabled selected>Bitte wählen</option>' +
+        berichte.map(b => `<option value="${b.id}">${escapeHtml(b.tourTitel)}</option>`).join('');
+    } catch (err) {
+      select.innerHTML = '<option>Fehler beim Laden</option>';
+      console.error(err);
+    }
+  }
+
+  document.getElementById('auswahl-bericht').addEventListener('change', (e) => {
+    const b = berichte.find(x => x.id === e.target.value);
+    const vorschau = document.getElementById('vorschau-bericht');
+    if (!b) { vorschau.style.display = 'none'; return; }
+
+    const text = `🏔️ ${b.tourTitel}\n\n${b.beschreibung}\n\nAlle Fotos & mehr: ${SITE_URL}`;
+
+    vorschau.innerHTML = `
+      <p class="block-label">Post-Text</p>
+      <textarea class="export-text" id="text-bericht" readonly>${text}</textarea>
+      <button class="aktion" id="btnKopierenBericht">Text kopieren</button>
+      <p class="status-msg" id="statusBericht"></p>
+      <p class="block-label" style="margin-top:20px">Fotos</p>
+      ${fotoGridHtml(b.fotos, slug(b.tourTitel))}
+    `;
+    vorschau.style.display = 'block';
+
+    document.getElementById('btnKopierenBericht').addEventListener('click', () => kopiere('text-bericht', 'statusBericht'));
+    vorschau.querySelectorAll('[data-foto-url]').forEach(btn => {
+      btn.addEventListener('click', () => fotoHerunterladen(btn.dataset.fotoUrl, btn.dataset.fotoName));
+    });
+  });
+
+  function kopiere(textareaId, statusId) {
+    const ta = document.getElementById(textareaId);
+    const statusMsg = document.getElementById(statusId);
+    navigator.clipboard?.writeText(ta.value).then(() => {
+      statusMsg.className = 'status-msg show ok';
+      statusMsg.textContent = 'Text kopiert.';
+    }).catch(() => {
+      ta.select();
+      document.execCommand('copy');
+      statusMsg.className = 'status-msg show ok';
+      statusMsg.textContent = 'Text kopiert.';
+    });
+  }
+
+  // ---------- Tabs ----------
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+    });
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>

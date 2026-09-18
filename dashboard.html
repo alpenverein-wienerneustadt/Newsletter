@@ -10,7 +10,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Tour anlegen">
+<meta name="apple-mobile-web-app-title" content="avwn-login">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -111,22 +111,37 @@
       <a href="#" id="logoutLink">Abmelden</a>
     </div>
 
-    <p class="group-title">Touren &amp; Berichte</p>
-    <div class="tile-grid">
-      <a class="tile" href="tour-anlegen.html">
-        <div>
-          <p class="tile-title">Tour ausschreiben</p>
-          <p class="tile-desc">Neue Tour mit Anmeldefunktion anlegen</p>
-        </div>
-        <span class="tile-arrow">→</span>
-      </a>
-      <a class="tile" href="tourenbericht-anlegen.html">
-        <div>
-          <p class="tile-title">Tourenbericht schreiben</p>
-          <p class="tile-desc">Bericht + Fotos zu einer durchgeführten Tour</p>
-        </div>
-        <span class="tile-arrow">→</span>
-      </a>
+    <div id="tourenBereich" style="display:none">
+      <p class="group-title">Touren &amp; Berichte</p>
+      <div class="tile-grid">
+        <a class="tile" href="tour-anlegen.html">
+          <div>
+            <p class="tile-title">Tour ausschreiben</p>
+            <p class="tile-desc">Neue Tour mit Anmeldefunktion anlegen</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="tourenbericht-anlegen.html">
+          <div>
+            <p class="tile-title">Tourenbericht schreiben</p>
+            <p class="tile-desc">Bericht + Fotos zu einer durchgeführten Tour</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+      </div>
+    </div>
+
+    <div id="socialBereich" style="display:none">
+      <p class="group-title">Social Media</p>
+      <div class="tile-grid">
+        <a class="tile" href="social-export.html">
+          <div>
+            <p class="tile-title">Social-Media-Export</p>
+            <p class="tile-desc">Fertiger Post-Text + Bilder für Veranstaltungen &amp; Tourenberichte</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+      </div>
     </div>
 
     <div id="vorstandBereich" style="display:none">
@@ -136,6 +151,20 @@
           <div>
             <p class="tile-title">Tourenführer verwalten</p>
             <p class="tile-desc">Accounts freischalten oder sperren</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="newsletter-export.html">
+          <div>
+            <p class="tile-title">Newsletter</p>
+            <p class="tile-desc">Abonnenten exportieren, Newsletter-Inhalt generieren</p>
+          </div>
+          <span class="tile-arrow">→</span>
+        </a>
+        <a class="tile" href="vorstand-archiv.html">
+          <div>
+            <p class="tile-title">Archiv</p>
+            <p class="tile-desc">Vergangene Touren &amp; Tourenberichte, PDF-Export, Löschen</p>
           </div>
           <span class="tile-arrow">→</span>
         </a>
@@ -242,7 +271,16 @@
       authGate.style.display = 'none';
       dashboardContent.style.display = 'block';
       document.getElementById('userBarName').textContent = profil.name || user.email;
-      if (profil.rolle === 'vorstand') {
+
+      const rollen = profil.rollen || [];
+      const istVorstand = rollen.includes('vorstand');
+      if (istVorstand || rollen.includes('tourenfuehrer')) {
+        document.getElementById('tourenBereich').style.display = 'block';
+      }
+      if (istVorstand || rollen.includes('social-media')) {
+        document.getElementById('socialBereich').style.display = 'block';
+      }
+      if (istVorstand) {
         document.getElementById('vorstandBereich').style.display = 'block';
       }
     } catch (err) {

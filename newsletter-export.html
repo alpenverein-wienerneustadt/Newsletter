@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Newsletter – Tourenführer Portal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
+    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:700px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 8px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  .card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:22px 24px; margin:20px 0;
+  }
+  .card h2{ font-family:'Fraunces', serif; font-size:18px; color:var(--forest-dk); margin:0 0 6px; }
+  .card p.hint{ font-size:13px; color:var(--ink-soft); margin:0 0 16px; }
+
+  .zahl{ font-size:32px; font-weight:600; color:var(--forest-dk); font-family:'Fraunces', serif; }
+  .zahl-label{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+
+  button.aktion{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:14px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:11px 20px; cursor:pointer;
+    margin-right:10px; margin-top:10px;
+  }
+  button.aktion:hover{ background:var(--forest-dk); }
+  button.aktion.sekundaer{ background:#fff; color:var(--forest-dk); border:1px solid var(--forest); }
+  button.aktion.sekundaer:hover{ background:var(--paper-2); }
+  button.aktion:disabled{ background:var(--line); border-color:var(--line); color:#fff; cursor:not-allowed; }
+
+  textarea.export-block{
+    width:100%; min-height:70px; font-family:'SF Mono', Consolas, monospace; font-size:12.5px;
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:10px;
+    margin-top:10px; resize:vertical;
+  }
+  .block-label{ font-size:12px; color:var(--trail); font-weight:600; margin:14px 0 2px; }
+
+  select{
+    font-family:inherit; font-size:14px; padding:9px 10px; border:1px solid var(--line);
+    border-radius:2px; background:#fff; margin-right:8px;
+  }
+
+  .status-msg{ font-size:13px; margin-top:10px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+
+  .config-warning{
+    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal · Vorstand
+  </div>
+  <h1>Newsletter</h1>
+  <p class="sub">Abonnenten exportieren und Newsletter-Inhalt zusammenstellen. <a href="dashboard.html">← Zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+
+  <div id="content" style="display:none">
+
+    <div class="card">
+      <h2>Abonnenten</h2>
+      <div class="zahl" id="abonnentenZahl">–</div>
+      <div class="zahl-label">aktive Abonnenten</div>
+      <p class="hint" style="margin-top:16px">Export nur aktive Abos, abgemeldete sind automatisch ausgeschlossen.</p>
+      <button class="aktion" id="btnCsvExport">CSV für Outlook-Import</button>
+      <button class="aktion sekundaer" id="btnBccExport">Liste für BCC-Versand</button>
+
+      <div id="bccBloecke" style="display:none">
+        <label class="block-label" for="blockGroesse">Empfänger pro Block</label><br>
+        <select id="blockGroesse">
+          <option value="50">50 (empfohlen)</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+        <button class="aktion sekundaer" id="btnBloeckeNeuBerechnen" style="padding:9px 14px">Neu berechnen</button>
+        <div id="bloeckeContainer"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Social Media</h2>
+      <p class="hint">Bild für Facebook/Instagram-Post herunterladen, dazu den Link zur Seite kopieren.</p>
+      <img src="og-banner.png" alt="Newsletter-Banner" style="width:100%;max-width:400px;border-radius:3px;border:1px solid var(--line);display:block;margin-bottom:14px;">
+      <button class="aktion" id="btnBildDownload">Bild herunterladen</button>
+      <button class="aktion sekundaer" id="btnLinkKopieren">Link kopieren</button>
+      <p class="status-msg" id="socialStatus"></p>
+    </div>
+
+    <div class="card">
+      <h2>Newsletter-Inhalt</h2>
+      <p class="hint">Erzeugt fertigen HTML-Code aus allen aktuell veröffentlichten Inhalten (Touren, Veranstaltungen, Kurse, Aktuelles) – zum Einfügen in dein Mailprogramm (z. B. Outlook: Einfügen als HTML / "Nur formatierten Text einfügen" deaktivieren).</p>
+      <button class="aktion" id="btnNewsletterGenerieren">Newsletter-HTML generieren</button>
+      <p class="status-msg" id="generierenStatus"></p>
+      <div id="newsletterVorschau" style="display:none">
+        <label class="block-label">Fertiger HTML-Code (kopieren und in dein Mailprogramm einfügen)</label>
+        <textarea class="export-block" id="newsletterHtml" style="min-height:160px" readonly></textarea>
+        <button class="aktion sekundaer" id="btnHtmlKopieren" style="margin-top:6px">In Zwischenablage kopieren</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const content = document.getElementById('content');
+  let db = null, auth = null;
+  let aktiveAbos = [];
+
+  const SITE_URL = 'https://alpenverein-wienerneustadt.github.io/Newsletter/';
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      if (!profil || !(profil.rollen || []).includes('vorstand') || profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für den Vorstand.';
+        return;
+      }
+      authGate.style.display = 'none';
+      content.style.display = 'block';
+      ladeAbonnenten();
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+  function formatDatum(iso) {
+    if (!iso) return '';
+    const [j, m, t] = iso.split('-');
+    return `${t}.${m}.${j}`;
+  }
+  function downloadDatei(inhalt, dateiname, typ) {
+    const blob = new Blob([inhalt], { type: typ });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = dateiname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  // ---------- Abonnenten ----------
+  async function ladeAbonnenten() {
+    try {
+      const snap = await db.collection('newsletterAbos').where('status', '==', 'aktiv').get();
+      aktiveAbos = snap.docs.map(d => d.data());
+      document.getElementById('abonnentenZahl').textContent = aktiveAbos.length;
+    } catch (err) {
+      console.error(err);
+      document.getElementById('abonnentenZahl').textContent = '–';
+    }
+  }
+
+  document.getElementById('btnCsvExport').addEventListener('click', () => {
+    if (!aktiveAbos.length) { alert('Keine aktiven Abonnenten.'); return; }
+    const zeilen = ['E-Mail-Adresse', ...aktiveAbos.map(a => a.email)];
+    // UTF-8 BOM für korrekte Umlaute in Outlook
+    downloadDatei('\uFEFF' + zeilen.join('\r\n'), 'newsletter-verteiler.csv', 'text/csv;charset=utf-8');
+  });
+
+  document.getElementById('btnBccExport').addEventListener('click', () => {
+    if (!aktiveAbos.length) { alert('Keine aktiven Abonnenten.'); return; }
+    document.getElementById('bccBloecke').style.display = 'block';
+    renderBloecke();
+  });
+  document.getElementById('btnBloeckeNeuBerechnen').addEventListener('click', renderBloecke);
+
+  function renderBloecke() {
+    const groesse = parseInt(document.getElementById('blockGroesse').value, 10);
+    const container = document.getElementById('bloeckeContainer');
+    const emails = aktiveAbos.map(a => a.email);
+    const bloecke = [];
+    for (let i = 0; i < emails.length; i += groesse) bloecke.push(emails.slice(i, i + groesse));
+
+    container.innerHTML = bloecke.map((block, i) => `
+      <p class="block-label">Block ${i + 1} von ${bloecke.length} (${block.length} Adressen) – ins BCC-Feld einfügen</p>
+      <textarea class="export-block" readonly>${block.join('; ')}</textarea>
+    `).join('');
+  }
+
+  document.getElementById('btnBildDownload').addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = 'og-banner.png';
+    a.download = 'newsletter-bild.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+
+  document.getElementById('btnLinkKopieren').addEventListener('click', () => {
+    const statusMsg = document.getElementById('socialStatus');
+    navigator.clipboard?.writeText(SITE_URL).then(() => {
+      statusMsg.className = 'status-msg show ok';
+      statusMsg.textContent = 'Link kopiert: ' + SITE_URL;
+    }).catch(() => {
+      statusMsg.className = 'status-msg show';
+      statusMsg.textContent = SITE_URL;
+    });
+  });
+
+  // ---------- Newsletter-Inhalt ----------
+  document.getElementById('btnNewsletterGenerieren').addEventListener('click', async () => {
+    const statusMsg = document.getElementById('generierenStatus');
+    statusMsg.className = 'status-msg';
+    statusMsg.textContent = 'Wird zusammengestellt …';
+    statusMsg.classList.add('show');
+
+    try {
+      const heute = new Date().toISOString().slice(0, 10);
+      const [infosSnap, veranstSnap, kurseSnap, tourenSnap] = await Promise.all([
+        db.collection('infosAktuell').orderBy('erstelltAm', 'desc').limit(6).get(),
+        db.collection('veranstaltungen').orderBy('erstelltAm', 'desc').get(),
+        db.collection('kurse').orderBy('erstelltAm', 'desc').get(),
+        db.collection('touren').where('status', '==', 'geplant').orderBy('datum', 'asc').get()
+      ]);
+
+      const touren = tourenSnap.docs.map(d => d.data()).filter(t => t.datum >= heute);
+
+      const html = baueNewsletterHtml({
+        infos: infosSnap.docs.map(d => d.data()),
+        veranstaltungen: veranstSnap.docs.map(d => d.data()),
+        kurse: kurseSnap.docs.map(d => d.data()),
+        touren
+      });
+
+      document.getElementById('newsletterHtml').value = html;
+      document.getElementById('newsletterVorschau').style.display = 'block';
+      statusMsg.textContent = 'Fertig – Code unten kopieren.';
+      statusMsg.classList.add('ok');
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler: ' + err.message;
+    }
+  });
+
+  function baueNewsletterHtml({ infos, veranstaltungen, kurse, touren }) {
+    const abschnitt = (titel, items, renderItem) => {
+      if (!items.length) return '';
+      return `
+<tr><td style="padding:24px 0 8px;font-family:Georgia,serif;font-size:19px;font-weight:bold;color:#2C4029;border-top:1px solid #E0DCCB;">${titel}</td></tr>
+${items.map(renderItem).join('')}`;
+    };
+
+    const infosHtml = abschnitt('Aktuelles', infos, (i) => `
+<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
+<strong>${escapeHtml(i.titel)}</strong><br>${escapeHtml(i.inhalt).replace(/\n/g, '<br>')}
+</td></tr>`);
+
+    const veranstHtml = abschnitt('Veranstaltungen', veranstaltungen, (v) => `
+<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
+<strong>${escapeHtml(v.titel)}</strong>${v.datum ? ' – ' + formatDatum(v.datum) : ''}${v.ort ? ' · ' + escapeHtml(v.ort) : ''}<br>${escapeHtml(v.beschreibung).replace(/\n/g, '<br>')}
+</td></tr>`);
+
+    const kurseHtml = abschnitt('Kurse', kurse, (k) => `
+<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
+<strong>${escapeHtml(k.titel)}</strong>${k.datum ? ' – ' + formatDatum(k.datum) : ''}${k.mindestalter ? ' · ab ' + k.mindestalter + ' Jahren' : ''}<br>${escapeHtml(k.beschreibung).replace(/\n/g, '<br>')}
+</td></tr>`);
+
+    const tourenHtml = abschnitt('Touren', touren, (t) => `
+<tr><td style="padding:8px 0;font-family:Arial,sans-serif;font-size:14px;color:#22261F;">
+<strong>${escapeHtml(t.titel)}</strong> – ${formatDatum(t.datum)}<br>${escapeHtml(t.treffpunkt)} um ${escapeHtml(t.treffzeit)}
+</td></tr>`);
+
+    return `<table role="presentation" width="100%" style="max-width:600px;margin:0 auto;border-collapse:collapse;">
+<tr><td style="padding:0 0 16px;font-family:Georgia,serif;font-size:24px;font-weight:bold;color:#2C4029;">Tourenführer Portal – Newsletter</td></tr>
+${infosHtml}${tourenHtml}${veranstHtml}${kurseHtml}
+<tr><td style="padding:28px 0 8px;font-family:Arial,sans-serif;font-size:14px;">
+<a href="${SITE_URL}" style="color:#2C4029;font-weight:bold;">Alle Touren, Kurse & Infos ansehen und anmelden →</a>
+</td></tr>
+<tr><td style="padding:16px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#565A4E;border-top:1px solid #E0DCCB;">
+Newsletter nicht mehr gewünscht? <a href="${SITE_URL}newsletter-abmelden.html" style="color:#565A4E;">Hier abmelden</a>.
+</td></tr>
+</table>`;
+  }
+
+  document.getElementById('btnHtmlKopieren').addEventListener('click', () => {
+    const ta = document.getElementById('newsletterHtml');
+    ta.select();
+    navigator.clipboard?.writeText(ta.value).catch(() => document.execCommand('copy'));
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>

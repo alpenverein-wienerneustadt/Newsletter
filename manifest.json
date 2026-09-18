@@ -1,6 +1,6 @@
 {
-  "name": "Tourenführer Portal – Tour anlegen",
-  "short_name": "Tour anlegen",
+  "name": "avwn-login",
+  "short_name": "avwn-login",
   "description": "Touren ausschreiben für Tourenführer des Alpenvereins Wiener Neustadt",
   "start_url": "dashboard.html",
   "scope": ".",

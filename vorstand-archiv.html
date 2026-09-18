@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archiv – Tourenführer Portal</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
+    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:700px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 8px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  .hinweis{
+    background:var(--paper-2); border-radius:3px; padding:14px 16px; margin:24px 0;
+    font-size:13px; color:var(--ink-soft);
+  }
+
+  .section-title{
+    font-family:'Fraunces', serif; font-size:20px; font-weight:600; color:var(--forest-dk);
+    margin: 36px 0 4px;
+  }
+  .section-hint{ font-size:13px; color:var(--ink-soft); margin:0 0 14px; }
+
+  .bulk-actions{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  button.bulk{
+    font-family:'Inter', sans-serif; font-size:13.5px; font-weight:600;
+    border:1px solid var(--line); background:#fff; color:var(--ink);
+    border-radius:2px; padding:9px 16px; cursor:pointer;
+  }
+  button.bulk:hover{ border-color:var(--forest); color:var(--forest-dk); }
+  button.bulk.gefahr{ border-color:var(--error); color:var(--error); }
+  button.bulk.gefahr:hover{ background:#FBEFE8; }
+  button.bulk:disabled{ opacity:0.5; cursor:not-allowed; }
+
+  .eintrag-card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:14px 16px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  .eintrag-card .titel{ font-weight:600; font-size:14px; }
+  .eintrag-card .meta{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+  .eintrag-aktionen{ display:flex; gap:8px; flex-shrink:0; }
+  button.mini{
+    font-family:'Inter', sans-serif; font-size:12.5px; font-weight:600;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    border-radius:2px; padding:6px 12px; cursor:pointer;
+  }
+  button.mini:hover{ border-color:var(--forest); color:var(--forest-dk); }
+  button.mini.loeschen{ color:var(--error); border-color:#E3B896; }
+  button.mini.loeschen:hover{ background:#FBEFE8; }
+  .empty-liste{ color:var(--ink-soft); font-size:13.5px; }
+  .fortschritt{ font-size:13px; color:var(--ink-soft); margin-top:8px; display:none; }
+  .fortschritt.show{ display:block; }
+
+  .config-warning{
+    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal · Vorstand
+  </div>
+  <h1>Archiv</h1>
+  <p class="sub">Vergangene Touren &amp; Tourenberichte. <a href="dashboard.html">← Zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+
+  <div id="content" style="display:none">
+    <div class="hinweis">
+      Löschen entfernt die Daten vollständig aus der Datenbank. Hochgeladene Fotos bleiben bei Cloudinary
+      bestehen (aus Sicherheitsgründen kann das öffentlich gehostete Portal Cloudinary-Dateien nicht automatisch
+      löschen) – bei Bedarf im <a href="https://console.cloudinary.com" target="_blank" style="color:var(--forest-dk)">Cloudinary-Dashboard</a>
+      manuell entfernen.
+    </div>
+
+    <p class="section-title">Vergangene Touren</p>
+    <p class="section-hint" id="tourenCount">Wird geladen …</p>
+    <div class="bulk-actions">
+      <button class="bulk" id="btnTourenPdfAlle">Alle als PDF</button>
+      <button class="bulk gefahr" id="btnTourenLoeschenAlle">Alle löschen</button>
+    </div>
+    <p class="fortschritt" id="tourenFortschritt"></p>
+    <div id="listeTouren"></div>
+
+    <p class="section-title">Tourenberichte</p>
+    <p class="section-hint" id="berichteCount">Wird geladen …</p>
+    <div class="bulk-actions">
+      <button class="bulk" id="btnBerichtePdfAlle">Alle als PDF</button>
+      <button class="bulk gefahr" id="btnBerichteLoeschenAlle">Alle löschen</button>
+    </div>
+    <p class="fortschritt" id="berichteFortschritt"></p>
+    <div id="listeBerichte"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const content = document.getElementById('content');
+  let db = null, auth = null;
+  let vergangeneTouren = [];
+  let alleBerichte = [];
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      if (!profil || !(profil.rollen || []).includes('vorstand') || profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für den Vorstand.';
+        return;
+      }
+      authGate.style.display = 'none';
+      content.style.display = 'block';
+      ladeVergangeneTouren();
+      ladeBerichte();
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+  function formatDatum(iso) {
+    if (!iso) return '';
+    const [j, m, t] = iso.split('-');
+    return `${t}.${m}.${j}`;
+  }
+  function slug(str) {
+    return (str || 'unbenannt').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  }
+
+  // ---------- Vergangene Touren ----------
+  async function ladeVergangeneTouren() {
+    const listeEl = document.getElementById('listeTouren');
+    listeEl.innerHTML = '<p class="empty-liste">Wird geladen …</p>';
+    try {
+      const heute = new Date().toISOString().slice(0, 10);
+      const snap = await db.collection('touren').where('datum', '<', heute).orderBy('datum', 'desc').get();
+      vergangeneTouren = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      document.getElementById('tourenCount').textContent = `${vergangeneTouren.length} vergangene Tour${vergangeneTouren.length === 1 ? '' : 'en'}`;
+      document.getElementById('btnTourenPdfAlle').disabled = !vergangeneTouren.length;
+      document.getElementById('btnTourenLoeschenAlle').disabled = !vergangeneTouren.length;
+
+      if (!vergangeneTouren.length) {
+        listeEl.innerHTML = '<p class="empty-liste">Keine vergangenen Touren.</p>';
+        return;
+      }
+      listeEl.innerHTML = vergangeneTouren.map(t => `
+        <div class="eintrag-card">
+          <div>
+            <p class="titel">${escapeHtml(t.titel)}</p>
+            <p class="meta">${formatDatum(t.datum)} · ${escapeHtml(t.erstelltVon || '')}</p>
+          </div>
+          <div class="eintrag-aktionen">
+            <button type="button" class="mini" data-pdf-tour="${t.id}">PDF</button>
+            <button type="button" class="mini loeschen" data-del-tour="${t.id}">Löschen</button>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      listeEl.innerHTML = '<p class="empty-liste">Fehler beim Laden: ' + err.message + '</p>';
+      console.error(err);
+    }
+  }
+
+  function pdfSeiteTour(doc, tour, neueSeite) {
+    if (neueSeite) doc.addPage();
+    let y = 20;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text(tour.titel || 'Ohne Titel', 15, y); y += 9;
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    const zeilen = [
+      `Datum: ${formatDatum(tour.datum)}${tour.datumEnde ? ' – ' + formatDatum(tour.datumEnde) : ''}`,
+      `Treffpunkt: ${tour.treffpunkt || '–'} um ${tour.treffzeit || '–'}`,
+      `Disziplin: ${tour.disziplin || '–'}  ·  Schwierigkeit: ${tour.schwierigkeit || '–'}`,
+      `Teilnehmer: ${tour.bestaetigtAnzahl || 0} von ${tour.maxTeilnehmer || '–'}`,
+      `Kosten: Mitglieder ${tour.kostenMitglied || 0} €  ·  Nicht-Mitglieder ${tour.kostenNichtmitglied || 0} €`,
+      `Tourenführer:in: ${tour.erstelltVon || '–'}`,
+      tour.ausruestung ? `Ausrüstung: ${tour.ausruestung}` : null,
+      (tour.besonderheiten && tour.besonderheiten.length) ? `Besonderheiten: ${tour.besonderheiten.join(', ')}` : null
+    ].filter(Boolean);
+
+    zeilen.forEach(z => {
+      const lines = doc.splitTextToSize(z, 180);
+      doc.text(lines, 15, y);
+      y += lines.length * 6;
+    });
+
+    y += 4;
+    doc.setFont('helvetica', 'bold'); doc.text('Beschreibung', 15, y); y += 7;
+    doc.setFont('helvetica', 'normal');
+    const beschreibung = doc.splitTextToSize(tour.beschreibung || '–', 180);
+    doc.text(beschreibung, 15, y);
+  }
+
+  function pdfSeiteBericht(doc, bericht, neueSeite) {
+    if (neueSeite) doc.addPage();
+    let y = 20;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
+    doc.text(bericht.tourTitel || 'Ohne Titel', 15, y); y += 9;
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    const zeilen = [
+      bericht.wetter ? `Wetter: ${bericht.wetter}` : null,
+      bericht.teilnehmerzahl != null ? `Teilnehmerzahl: ${bericht.teilnehmerzahl}` : null,
+      `Verfasst von: ${bericht.erstelltVon || '–'}`
+    ].filter(Boolean);
+    zeilen.forEach(z => { doc.text(z, 15, y); y += 6; });
+
+    y += 4;
+    doc.setFont('helvetica', 'bold'); doc.text('Bericht', 15, y); y += 7;
+    doc.setFont('helvetica', 'normal');
+    const text = doc.splitTextToSize(bericht.beschreibung || '–', 180);
+    doc.text(text, 15, y);
+    y += text.length * 6 + 6;
+
+    if (bericht.fotos && bericht.fotos.length) {
+      doc.setFont('helvetica', 'bold'); doc.text('Fotos (Links, Bilder siehe Website)', 15, y); y += 7;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+      bericht.fotos.forEach((f, i) => {
+        const zeile = doc.splitTextToSize(`${i + 1}. ${f.beschreibung ? f.beschreibung + ' – ' : ''}${f.url}`, 180);
+        doc.text(zeile, 15, y);
+        y += zeile.length * 5;
+      });
+    }
+  }
+
+  document.getElementById('btnTourenPdfAlle').addEventListener('click', () => {
+    if (!vergangeneTouren.length) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    vergangeneTouren.forEach((t, i) => pdfSeiteTour(doc, t, i > 0));
+    doc.save(`vergangene-touren.pdf`);
+  });
+
+  document.getElementById('btnBerichtePdfAlle').addEventListener('click', () => {
+    if (!alleBerichte.length) return;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    alleBerichte.forEach((b, i) => pdfSeiteBericht(doc, b, i > 0));
+    doc.save(`tourenberichte.pdf`);
+  });
+
+  async function loescheTourKomplett(tourId) {
+    const tourRef = db.collection('touren').doc(tourId);
+    const [anmeldSnap, versSnap] = await Promise.all([
+      tourRef.collection('anmeldungen').get(),
+      tourRef.collection('versionen').get()
+    ]);
+    const batch = db.batch();
+    anmeldSnap.docs.forEach(d => batch.delete(d.ref));
+    versSnap.docs.forEach(d => batch.delete(d.ref));
+    batch.delete(tourRef);
+    await batch.commit();
+  }
+
+  document.getElementById('btnTourenLoeschenAlle').addEventListener('click', async () => {
+    if (!vergangeneTouren.length) return;
+    if (!confirm(`Wirklich alle ${vergangeneTouren.length} vergangenen Touren endgültig löschen? Das kann nicht rückgängig gemacht werden.`)) return;
+
+    const fortschritt = document.getElementById('tourenFortschritt');
+    fortschritt.classList.add('show');
+    let erledigt = 0;
+    for (const t of vergangeneTouren) {
+      fortschritt.textContent = `Lösche … (${++erledigt}/${vergangeneTouren.length})`;
+      try { await loescheTourKomplett(t.id); } catch (err) { console.error('Fehler bei', t.id, err); }
+    }
+    fortschritt.textContent = 'Fertig.';
+    setTimeout(() => fortschritt.classList.remove('show'), 3000);
+    ladeVergangeneTouren();
+  });
+
+  document.getElementById('listeTouren').addEventListener('click', async (e) => {
+    const pdfBtn = e.target.closest('[data-pdf-tour]');
+    if (pdfBtn) {
+      const tour = vergangeneTouren.find(t => t.id === pdfBtn.dataset.pdfTour);
+      if (!tour) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      pdfSeiteTour(doc, tour, false);
+      doc.save(`tour-${slug(tour.titel)}-${tour.datum}.pdf`);
+      return;
+    }
+    const delBtn = e.target.closest('[data-del-tour]');
+    if (delBtn) {
+      const id = delBtn.dataset.delTour;
+      const tour = vergangeneTouren.find(t => t.id === id);
+      if (!confirm(`Tour "${tour?.titel}" wirklich endgültig löschen?`)) return;
+      try {
+        await loescheTourKomplett(id);
+        ladeVergangeneTouren();
+      } catch (err) {
+        alert('Fehler beim Löschen: ' + err.message);
+      }
+    }
+  });
+
+  // ---------- Tourenberichte ----------
+  async function ladeBerichte() {
+    const listeEl = document.getElementById('listeBerichte');
+    listeEl.innerHTML = '<p class="empty-liste">Wird geladen …</p>';
+    try {
+      const snap = await db.collection('berichte').orderBy('erstelltAm', 'desc').get();
+      alleBerichte = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      document.getElementById('berichteCount').textContent = `${alleBerichte.length} Tourenbericht${alleBerichte.length === 1 ? '' : 'e'}`;
+      document.getElementById('btnBerichtePdfAlle').disabled = !alleBerichte.length;
+      document.getElementById('btnBerichteLoeschenAlle').disabled = !alleBerichte.length;
+
+      if (!alleBerichte.length) {
+        listeEl.innerHTML = '<p class="empty-liste">Noch keine Tourenberichte.</p>';
+        return;
+      }
+      listeEl.innerHTML = alleBerichte.map(b => `
+        <div class="eintrag-card">
+          <div>
+            <p class="titel">${escapeHtml(b.tourTitel)}</p>
+            <p class="meta">${escapeHtml(b.erstelltVon || '')}${b.fotos && b.fotos.length ? ` · ${b.fotos.length} Foto(s)` : ''}</p>
+          </div>
+          <div class="eintrag-aktionen">
+            <button type="button" class="mini" data-pdf-bericht="${b.id}">PDF</button>
+            <button type="button" class="mini loeschen" data-del-bericht="${b.id}">Löschen</button>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      listeEl.innerHTML = '<p class="empty-liste">Fehler beim Laden: ' + err.message + '</p>';
+      console.error(err);
+    }
+  }
+
+  document.getElementById('btnBerichteLoeschenAlle').addEventListener('click', async () => {
+    if (!alleBerichte.length) return;
+    if (!confirm(`Wirklich alle ${alleBerichte.length} Tourenberichte endgültig löschen? Fotos bleiben bei Cloudinary bestehen. Das kann nicht rückgängig gemacht werden.`)) return;
+
+    const fortschritt = document.getElementById('berichteFortschritt');
+    fortschritt.classList.add('show');
+    let erledigt = 0;
+    const batchArr = [...alleBerichte];
+    for (const b of batchArr) {
+      fortschritt.textContent = `Lösche … (${++erledigt}/${batchArr.length})`;
+      try { await db.collection('berichte').doc(b.id).delete(); } catch (err) { console.error('Fehler bei', b.id, err); }
+    }
+    fortschritt.textContent = 'Fertig.';
+    setTimeout(() => fortschritt.classList.remove('show'), 3000);
+    ladeBerichte();
+  });
+
+  document.getElementById('listeBerichte').addEventListener('click', async (e) => {
+    const pdfBtn = e.target.closest('[data-pdf-bericht]');
+    if (pdfBtn) {
+      const bericht = alleBerichte.find(b => b.id === pdfBtn.dataset.pdfBericht);
+      if (!bericht) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      pdfSeiteBericht(doc, bericht, false);
+      doc.save(`bericht-${slug(bericht.tourTitel)}.pdf`);
+      return;
+    }
+    const delBtn = e.target.closest('[data-del-bericht]');
+    if (delBtn) {
+      const id = delBtn.dataset.delBericht;
+      const bericht = alleBerichte.find(b => b.id === id);
+      if (!confirm(`Bericht zu "${bericht?.tourTitel}" wirklich endgültig löschen?`)) return;
+      try {
+        await db.collection('berichte').doc(id).delete();
+        ladeBerichte();
+      } catch (err) {
+        alert('Fehler beim Löschen: ' + err.message);
+      }
+    }
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>

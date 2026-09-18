@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Tour anlegen">
+<meta name="apple-mobile-web-app-title" content="avwn-login">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -512,6 +512,11 @@
         } else if (profil.status !== 'genehmigt') {
           authGate.className = 'auth-box';
           authGate.innerHTML = 'Dein Account wartet noch auf Freischaltung durch den Vorstand.';
+          form.style.display = 'none';
+          userBar.style.display = 'flex';
+        } else if (!(profil.rollen || []).includes('vorstand') && !(profil.rollen || []).includes('tourenfuehrer')) {
+          authGate.className = 'auth-box err';
+          authGate.innerHTML = 'Kein Zugriff – dieser Bereich ist nur für Tourenführer:innen oder den Vorstand.';
           form.style.display = 'none';
           userBar.style.display = 'flex';
         } else {

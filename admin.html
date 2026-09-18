@@ -140,7 +140,7 @@
       const doc = await db.collection('users').doc(user.uid).get();
       const profil = doc.exists ? doc.data() : null;
 
-      if (!profil || profil.rolle !== 'vorstand' || profil.status !== 'genehmigt') {
+      if (!profil || !(profil.rollen || []).includes('vorstand') || profil.status !== 'genehmigt') {
         authGate.className = 'auth-box err';
         authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für den Vorstand.';
         return;
@@ -191,7 +191,7 @@
       <div class="user-card">
         <div class="user-info">
           <p class="user-name">${escapeHtml(u.name || u.email)}</p>
-          <p class="user-meta">${escapeHtml(u.email)} · ${escapeHtml(u.rolle)} · <span class="badge ${u.status}">${badgeLabel}</span></p>
+          <p class="user-meta">${escapeHtml(u.email)} · ${escapeHtml((u.rollen || []).join(', ') || '–')} · <span class="badge ${u.status}">${badgeLabel}</span></p>
         </div>
         <div class="user-actions">
           ${u.status !== 'genehmigt' ? `<button class="action genehmigen" data-uid="${u.id}" data-status="genehmigt">Genehmigen</button>` : ''}

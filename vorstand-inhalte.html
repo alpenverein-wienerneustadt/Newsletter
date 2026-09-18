@@ -108,6 +108,24 @@
   button.mini.loeschen{ color:var(--error); border-color:#E3B896; }
   button.mini.loeschen:hover{ background:#FBEFE8; }
   .empty-liste{ color:var(--ink-soft); font-size:13.5px; }
+
+  .foto-slot{
+    border:1px dashed var(--line); border-radius:3px; padding:14px; margin-bottom:14px;
+    display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap;
+  }
+  .foto-slot.titelbild{ border-style:solid; border-color:var(--trail); }
+  .foto-preview{
+    width:80px; height:80px; border-radius:2px; background:var(--paper-2);
+    display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0;
+  }
+  .foto-preview img{ width:100%; height:100%; object-fit:cover; }
+  .foto-preview span{ font-size:10.5px; color:var(--ink-soft); text-align:center; padding:4px; }
+  .foto-fields{ flex:1; min-width:160px; }
+  .foto-fields input[type=file]{ font-size:12.5px; margin-bottom:8px; }
+  .foto-fields textarea{ min-height:44px; font-size:13px; }
+  .foto-label{ font-size:11.5px; color:var(--trail); font-weight:600; margin:0 0 6px; }
+  .upload-status{ font-size:11.5px; color:var(--ink-soft); margin-top:4px; }
+  .upload-status.err{ color:var(--error); }
 </style>
 </head>
 <body>
@@ -122,6 +140,9 @@
 
   <div class="config-warning" id="configWarning">
     Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+  <div class="config-warning" id="cloudinaryWarning">
+    Cloudinary ist noch nicht konfiguriert – Fotos können erst nach Eintragen von <code>CLOUDINARY_CLOUD_NAME</code>/<code>CLOUDINARY_UPLOAD_PRESET</code> hochgeladen werden.
   </div>
 
   <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
@@ -156,6 +177,10 @@
         <label>Beschreibung</label>
         <textarea class="f-beschreibung" required></textarea>
         <p class="field-error">Bitte eine Beschreibung eingeben.</p>
+      </div>
+      <div class="field">
+        <label>Fotos <span class="opt">(optional, bis zu 5)</span></label>
+        <div id="fotoSlots-veranstaltung"></div>
       </div>
       <button type="submit">Veranstaltung veröffentlichen</button>
       <p class="status-msg"></p>
@@ -227,6 +252,10 @@
         <textarea class="f-inhalt" style="min-height:160px" required></textarea>
         <p class="field-error">Bitte einen Inhalt eingeben.</p>
       </div>
+      <div class="field">
+        <label>Fotos <span class="opt">(optional, bis zu 5)</span></label>
+        <div id="fotoSlots-infoAllgemein"></div>
+      </div>
       <button type="submit">Info veröffentlichen</button>
       <p class="status-msg"></p>
     </form>
@@ -246,6 +275,10 @@
         <label>Inhalt</label>
         <textarea class="f-inhalt" required></textarea>
         <p class="field-error">Bitte einen Inhalt eingeben.</p>
+      </div>
+      <div class="field">
+        <label>Fotos <span class="opt">(optional, bis zu 5)</span></label>
+        <div id="fotoSlots-infoAktuell"></div>
       </div>
       <button type="submit">Meldung veröffentlichen</button>
       <p class="status-msg"></p>
@@ -269,6 +302,125 @@
     messagingSenderId: "122590369431",
     appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
   };
+
+  const CLOUDINARY_CLOUD_NAME = "yeihm0g5";
+  const CLOUDINARY_UPLOAD_PRESET = "ml_default";
+  const cloudinaryConfigured = CLOUDINARY_CLOUD_NAME !== "DEIN_CLOUD_NAME";
+  if (!cloudinaryConfigured) document.getElementById('cloudinaryWarning').classList.add('show');
+
+  const FOTO_TABS = ['veranstaltung', 'infoAllgemein', 'infoAktuell'];
+  const fotoUrls = {};
+  FOTO_TABS.forEach(tab => { fotoUrls[tab] = [null, null, null, null, null]; });
+
+  function renderFotoSlots(tabKey) {
+    const container = document.getElementById('fotoSlots-' + tabKey);
+    if (!container) return;
+    let html = '';
+    for (let i = 0; i < 5; i++) {
+      html += `
+        <div class="foto-slot${i === 0 ? ' titelbild' : ''}">
+          <div class="foto-preview" id="preview-${tabKey}-${i}"><span>${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)}</span></div>
+          <div class="foto-fields">
+            <p class="foto-label">${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)}</p>
+            <input type="file" accept="image/*" class="foto-input" data-tab="${tabKey}" data-slot="${i}">
+            <div class="upload-status" id="uploadStatus-${tabKey}-${i}"></div>
+            <textarea placeholder="Bildbeschreibung" id="fotoBeschreibung-${tabKey}-${i}"></textarea>
+          </div>
+        </div>`;
+    }
+    container.innerHTML = html;
+    container.querySelectorAll('.foto-input').forEach(input => {
+      input.addEventListener('change', (e) => uploadFoto(e.target, e.target.dataset.tab, parseInt(e.target.dataset.slot, 10)));
+    });
+  }
+  FOTO_TABS.forEach(renderFotoSlots);
+
+  function komprimiereBild(file, maxDim = 1600, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+            else { width = Math.round(width * maxDim / height); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Komprimierung fehlgeschlagen')), 'image/jpeg', quality);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadFoto(input, tabKey, slot) {
+    const file = input.files[0];
+    if (!file) return;
+    const statusEl = document.getElementById(`uploadStatus-${tabKey}-${slot}`);
+    statusEl.className = 'upload-status';
+
+    if (!cloudinaryConfigured) {
+      statusEl.textContent = 'Cloudinary nicht konfiguriert.';
+      statusEl.classList.add('err');
+      input.value = '';
+      return;
+    }
+
+    statusEl.textContent = 'Wird komprimiert …';
+    let uploadFile = file;
+    try {
+      uploadFile = await komprimiereBild(file);
+    } catch (err) {
+      console.warn('Komprimierung fehlgeschlagen, lade Original hoch:', err);
+    }
+
+    statusEl.textContent = 'Wird hochgeladen …';
+    const formData = new FormData();
+    formData.append('file', uploadFile, 'foto.jpg');
+    formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+
+    try {
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || 'Upload fehlgeschlagen');
+
+      fotoUrls[tabKey][slot] = json.secure_url;
+      document.getElementById(`preview-${tabKey}-${slot}`).innerHTML = `<img src="${json.secure_url}" alt="">`;
+      statusEl.textContent = 'Hochgeladen.';
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = 'Fehler: ' + err.message;
+      statusEl.classList.add('err');
+    }
+  }
+
+  function fotoSlotsZuruecksetzen(tabKey) {
+    fotoUrls[tabKey] = [null, null, null, null, null];
+    for (let i = 0; i < 5; i++) {
+      const preview = document.getElementById(`preview-${tabKey}-${i}`);
+      if (preview) preview.innerHTML = `<span>${i === 0 ? 'Titelbild' : 'Foto ' + (i + 1)}</span>`;
+      const status = document.getElementById(`uploadStatus-${tabKey}-${i}`);
+      if (status) status.textContent = '';
+      const caption = document.getElementById(`fotoBeschreibung-${tabKey}-${i}`);
+      if (caption) caption.value = '';
+    }
+  }
+
+  function fotoSlotsBefuellen(tabKey, fotos) {
+    fotoSlotsZuruecksetzen(tabKey);
+    (fotos || []).forEach((foto, i) => {
+      if (i >= 5) return;
+      fotoUrls[tabKey][i] = foto.url;
+      document.getElementById(`preview-${tabKey}-${i}`).innerHTML = `<img src="${foto.url}" alt="">`;
+      document.getElementById(`fotoBeschreibung-${tabKey}-${i}`).value = foto.beschreibung || '';
+    });
+  }
 
   const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
   const authGate = document.getElementById('authGate');
@@ -294,7 +446,7 @@
     try {
       const doc = await db.collection('users').doc(user.uid).get();
       const profil = doc.exists ? doc.data() : null;
-      if (!profil || profil.rolle !== 'vorstand' || profil.status !== 'genehmigt') {
+      if (!profil || !(profil.rollen || []).includes('vorstand') || profil.status !== 'genehmigt') {
         authGate.className = 'auth-box err';
         authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für den Vorstand.';
         return;
@@ -361,6 +513,7 @@
         el.value = eintrag[feldname] != null ? eintrag[feldname] : '';
       });
       editingIds[tab] = id;
+      if (FOTO_TABS.includes(tab)) fotoSlotsBefuellen(tab, eintrag.fotos);
       const btn = form.querySelector('button[type=submit]');
       btn.dataset.originalLabel = btn.dataset.originalLabel || btn.textContent;
       btn.textContent = 'Aktualisieren';
@@ -371,7 +524,12 @@
     const loeschenBtn = e.target.closest('button.loeschen');
     if (loeschenBtn) {
       const { tab, id } = loeschenBtn.dataset;
-      if (!confirm('Diesen Eintrag wirklich löschen?')) return;
+      const eintrag = eintragsCache[tab]?.[id];
+      const hatFotos = eintrag && eintrag.fotos && eintrag.fotos.length;
+      const frage = hatFotos
+        ? `Diesen Eintrag wirklich löschen? Die ${eintrag.fotos.length} hochgeladenen Fotos bleiben bei Cloudinary bestehen (kein automatisches Löschen möglich) und müssten bei Bedarf dort manuell entfernt werden.`
+        : 'Diesen Eintrag wirklich löschen?';
+      if (!confirm(frage)) return;
       try {
         await db.collection(TAB_CONFIG[tab].collection).doc(id).delete();
         if (editingIds[tab] === id) {
@@ -380,6 +538,7 @@
           const btn = form.querySelector('button[type=submit]');
           btn.textContent = btn.dataset.originalLabel || btn.textContent;
           form.reset();
+          if (FOTO_TABS.includes(tab)) fotoSlotsZuruecksetzen(tab);
         }
         ladeListe(tab);
       } catch (err) {
@@ -433,6 +592,17 @@
         }
       });
 
+      if (FOTO_TABS.includes(tabKey)) {
+        const fotos = [];
+        for (let i = 0; i < 5; i++) {
+          if (fotoUrls[tabKey][i]) {
+            const caption = document.getElementById(`fotoBeschreibung-${tabKey}-${i}`).value.trim();
+            fotos.push({ url: fotoUrls[tabKey][i], beschreibung: caption || null });
+          }
+        }
+        data.fotos = fotos;
+      }
+
       const btn = form.querySelector('button[type=submit]');
       btn.disabled = true;
       btn.dataset.originalLabel = btn.dataset.originalLabel || btn.textContent;
@@ -449,12 +619,14 @@
           data.erstelltVon = aktuellerUser.name;
           data.erstelltVonUid = aktuellerUser.uid;
           data.erstelltAm = firebase.firestore.FieldValue.serverTimestamp();
+          if (tabKey === 'kurs') data.bestaetigtAnzahl = 0;
           await db.collection(form.dataset.collection).add(data);
           statusMsg.textContent = 'Gespeichert und veröffentlicht.';
         }
         statusMsg.classList.add('show', 'ok');
         form.reset();
         felder.forEach(el => el.closest('.field') && el.closest('.field').classList.remove('invalid'));
+        if (FOTO_TABS.includes(tabKey)) fotoSlotsZuruecksetzen(tabKey);
         ladeListe(tabKey);
       } catch (err) {
         console.error(err);

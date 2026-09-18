@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Touren – Tourenführer Portal</title>
 
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tourenführer Portal – Touren, Kurse & Infos">
+<meta property="og:description" content="Aktuelle Touren, Kurse, Veranstaltungen und Infos – direkt anmelden.">
+<meta property="og:image" content="https://alpenverein-wienerneustadt.github.io/Newsletter/og-banner.png">
+<meta property="og:url" content="https://alpenverein-wienerneustadt.github.io/Newsletter/">
+<meta name="twitter:card" content="summary_large_image">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
@@ -101,16 +108,47 @@
 
   footer.note{ margin-top:36px; font-size:12.5px; color:var(--ink-soft); text-align:center; }
 
+  .newsletter-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin-top:36px; text-align:center;
+  }
+  .newsletter-titel{ font-family:'Fraunces', serif; font-weight:600; font-size:18px; color:var(--forest-dk); margin:0 0 4px; }
+  .newsletter-hint{ font-size:13px; color:var(--ink-soft); margin:0 0 16px; }
+  #newsletterForm{ display:flex; gap:8px; max-width:360px; margin:0 auto; flex-wrap:wrap; justify-content:center; }
+  #newsletterForm input{
+    flex:1; min-width:200px; font-family:inherit; font-size:14px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:10px 12px;
+  }
+  #newsletterForm input:focus{ outline:none; border-color:var(--forest); background:#fff; }
+  #newsletterForm button{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:14px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:10px 18px; cursor:pointer;
+  }
+  #newsletterForm button:hover{ background:var(--forest-dk); }
+  #newsletterForm button:disabled{ background:var(--line); cursor:not-allowed; }
+  .newsletter-abmelden{ margin:12px 0 0; font-size:12px; }
+  .newsletter-abmelden a{ color:var(--ink-soft); }
+  .status-msg{ font-size:13px; margin-top:10px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+  .status-msg.err{ color:var(--error); }
+
   .content-section{ margin: 30px 0; }
   .content-section .group-title{
     font-family:'Fraunces', serif; font-size:19px; font-weight:600; color:var(--forest-dk); margin:0 0 12px;
   }
   .content-card{
     background:#fff; border:1px solid var(--line); border-radius:3px; padding:16px 20px; margin-bottom:10px;
+    text-decoration:none; color:inherit; display:block; transition: border-color .15s ease;
   }
+  a.content-card:hover{ border-color:var(--forest); }
   .content-card .titel{ font-family:'Fraunces', serif; font-weight:600; font-size:16px; color:var(--forest-dk); margin:0 0 4px; }
   .content-card .meta{ font-size:12.5px; color:var(--trail); margin:0 0 6px; }
   .content-card .text{ font-size:14px; color:var(--ink); white-space:pre-line; margin:0; }
+  .content-card .foto-galerie{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .content-card .foto-galerie figure{ margin:0; width:96px; }
+  .content-card .foto-galerie img{ width:96px; height:96px; object-fit:cover; border-radius:2px; display:block; }
+  .content-card .foto-galerie figcaption{ font-size:11px; color:var(--ink-soft); margin-top:3px; }
 
   .config-warning{
     background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
@@ -163,6 +201,17 @@
   <div id="kurseSection"></div>
   <div id="infoAllgemeinSection"></div>
 
+  <div class="newsletter-box">
+    <p class="newsletter-titel">Newsletter abonnieren</p>
+    <p class="newsletter-hint">Neue Touren, Veranstaltungen und Infos regelmäßig per Mail.</p>
+    <form id="newsletterForm" novalidate>
+      <input type="email" id="newsletterEmail" placeholder="deine@email.at" required>
+      <button type="submit" id="newsletterBtn">Anmelden</button>
+    </form>
+    <p class="status-msg" id="newsletterStatus"></p>
+    <p class="newsletter-abmelden"><a href="newsletter-abmelden.html">Newsletter abmelden</a></p>
+  </div>
+
   <footer class="note">Nur Touren mit Status „geplant" werden angezeigt.</footer>
 </div>
 
@@ -199,12 +248,68 @@
     ladeVeranstaltungen(db);
     ladeKurse(db);
     ladeAllgemeineInfos(db);
+    initNewsletterForm(db);
+  }
+
+  function normalizeId(str) {
+    const id = (str || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    return id || 'unbekannt';
+  }
+
+  function initNewsletterForm(db) {
+    const form = document.getElementById('newsletterForm');
+    const statusMsg = document.getElementById('newsletterStatus');
+    const btn = document.getElementById('newsletterBtn');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusMsg.className = 'status-msg';
+      const email = document.getElementById('newsletterEmail').value.trim();
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Wird gespeichert …';
+      try {
+        const id = normalizeId(email);
+        await db.collection('newsletterAbos').doc(id).set({
+          email,
+          status: 'aktiv',
+          angemeldetAm: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+        statusMsg.textContent = 'Angemeldet! Du bekommst ab jetzt den Newsletter.';
+        statusMsg.classList.add('show', 'ok');
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        statusMsg.textContent = 'Fehler: ' + err.message;
+        statusMsg.classList.add('show', 'err');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Anmelden';
+      }
+    });
   }
 
   function formatDatumLang(iso) {
     if (!iso) return '';
     const [j, m, t] = iso.split('-');
     return `${t}.${m}.${j}`;
+  }
+
+  function fotosHtml(fotos) {
+    if (!fotos || !fotos.length) return '';
+    return `<div class="foto-galerie">` + fotos.map(f => `
+      <figure>
+        <img src="${cloudinaryOptimiert(f.url, 240)}" alt="" loading="lazy">
+        ${f.beschreibung ? `<figcaption>${escapeHtml(f.beschreibung)}</figcaption>` : ''}
+      </figure>`).join('') + `</div>`;
+  }
+
+  // Liefert automatisch verkleinerte, formatoptimierte (WebP/AVIF) Version statt des Originals.
+  // Reduziert die Cloudinary-Bandbreite pro Aufruf massiv.
+  function cloudinaryOptimiert(url, breite) {
+    if (!url || !url.includes('/upload/')) return url;
+    return url.replace('/upload/', `/upload/f_auto,q_auto,w_${breite}/`);
   }
 
   async function ladeAktuelleInfos(db) {
@@ -215,7 +320,7 @@
       el.innerHTML = `<div class="content-section"><p class="group-title">Aktuelles</p>` +
         snap.docs.map(d => {
           const i = d.data();
-          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p></div>`;
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${fotosHtml(i.fotos)}</div>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -229,7 +334,7 @@
         snap.docs.map(d => {
           const v = d.data();
           const meta = [v.datum ? formatDatumLang(v.datum) : null, v.ort].filter(Boolean).join(' · ');
-          return `<div class="content-card"><p class="titel">${escapeHtml(v.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(v.beschreibung)}</p></div>`;
+          return `<div class="content-card"><p class="titel">${escapeHtml(v.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(v.beschreibung)}</p>${fotosHtml(v.fotos)}</div>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -243,7 +348,7 @@
         snap.docs.map(d => {
           const k = d.data();
           const meta = [k.datum ? formatDatumLang(k.datum) : null, k.ort, k.mindestalter ? `ab ${k.mindestalter} Jahren` : null].filter(Boolean).join(' · ');
-          return `<div class="content-card"><p class="titel">${escapeHtml(k.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(k.beschreibung)}</p></div>`;
+          return `<a class="content-card" href="kurs-detail.html?id=${d.id}"><p class="titel">${escapeHtml(k.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(k.beschreibung)}</p></a>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -256,7 +361,7 @@
       el.innerHTML = `<div class="content-section"><p class="group-title">Allgemeine Infos</p>` +
         snap.docs.map(d => {
           const i = d.data();
-          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p></div>`;
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${fotosHtml(i.fotos)}</div>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -300,7 +405,10 @@
         .orderBy('datum', 'asc')
         .get();
 
-      alleTouren = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const heute = new Date().toISOString().slice(0, 10);
+      alleTouren = snap.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(t => t.datum >= heute);
       render();
     } catch (err) {
       console.error(err);

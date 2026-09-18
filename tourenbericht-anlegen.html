@@ -240,11 +240,18 @@
           : 'Dein Account wartet noch auf Freischaltung durch den Vorstand.';
         return;
       }
+      const rollen = profil.rollen || [];
+      const istVorstand = rollen.includes('vorstand');
+      if (!istVorstand && !rollen.includes('tourenfuehrer')) {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für Tourenführer:innen oder den Vorstand.';
+        return;
+      }
       authGate.style.display = 'none';
       userBar.style.display = 'flex';
       form.style.display = 'block';
       document.getElementById('userBarName').textContent = profil.name || user.email;
-      aktuellerUser = { uid: user.uid, name: profil.name || user.email, istVorstand: profil.rolle === 'vorstand' };
+      aktuellerUser = { uid: user.uid, name: profil.name || user.email, istVorstand };
       ladeTouren();
     } catch (err) {
       authGate.className = 'auth-box err';
@@ -302,6 +309,30 @@
     input.addEventListener('change', (e) => uploadFoto(e.target, parseInt(e.target.dataset.slot, 10)));
   });
 
+  function komprimiereBild(file, maxDim = 1600, quality = 0.82) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Datei konnte nicht gelesen werden'));
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onerror = () => reject(new Error('Bild konnte nicht geladen werden'));
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+            else { width = Math.round(width * maxDim / height); height = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width; canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Komprimierung fehlgeschlagen')), 'image/jpeg', quality);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function uploadFoto(input, slot) {
     const file = input.files[0];
     if (!file) return;
@@ -315,9 +346,17 @@
       return;
     }
 
+    statusEl.textContent = 'Wird komprimiert …';
+    let uploadFile = file;
+    try {
+      uploadFile = await komprimiereBild(file);
+    } catch (err) {
+      console.warn('Komprimierung fehlgeschlagen, lade Original hoch:', err);
+    }
+
     statusEl.textContent = 'Wird hochgeladen …';
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', uploadFile, 'foto.jpg');
     formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
 
     try {
