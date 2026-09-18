@@ -11,15 +11,15 @@
 
 <style>
   :root{
-    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
-    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
     background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
     font-size:16px; line-height:1.5;
-    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
     background-size: 22px 22px;
   }
   .page{ max-width:700px; margin:0 auto; padding:40px 20px 80px; }
@@ -36,7 +36,7 @@
     background:#fff; border:1px solid var(--line); border-radius:3px;
     padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
   }
-  .auth-box.err{ border-color:#E3B896; background:#FBEFE8; color:#7A4322; }
+  .auth-box.err{ border-color:#F0B4AE; background:#FDECEA; color:#8A2A22; }
   .auth-box a{ color:var(--forest-dk); font-weight:600; }
 
   .hinweis{
@@ -58,7 +58,7 @@
   }
   button.bulk:hover{ border-color:var(--forest); color:var(--forest-dk); }
   button.bulk.gefahr{ border-color:var(--error); color:var(--error); }
-  button.bulk.gefahr:hover{ background:#FBEFE8; }
+  button.bulk.gefahr:hover{ background:#FDECEA; }
   button.bulk:disabled{ opacity:0.5; cursor:not-allowed; }
 
   .eintrag-card{
@@ -74,14 +74,14 @@
     border-radius:2px; padding:6px 12px; cursor:pointer;
   }
   button.mini:hover{ border-color:var(--forest); color:var(--forest-dk); }
-  button.mini.loeschen{ color:var(--error); border-color:#E3B896; }
-  button.mini.loeschen:hover{ background:#FBEFE8; }
+  button.mini.loeschen{ color:var(--error); border-color:#F0B4AE; }
+  button.mini.loeschen:hover{ background:#FDECEA; }
   .empty-liste{ color:var(--ink-soft); font-size:13.5px; }
   .fortschritt{ font-size:13px; color:var(--ink-soft); margin-top:8px; display:none; }
   .fortschritt.show{ display:block; }
 
   .config-warning{
-    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
@@ -91,7 +91,7 @@
 
 <div class="page">
   <div class="eyebrow-line">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#58B030" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
     Tourenführer Portal · Vorstand
   </div>
   <h1>Archiv</h1>
@@ -266,9 +266,31 @@
     doc.text(beschreibung, 15, y);
   }
 
-  function pdfSeiteBericht(doc, bericht, neueSeite) {
+  function bildAlsDataUrl(url) {
+    return fetch(url, { mode: 'cors' })
+      .then(res => res.blob())
+      .then(blob => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Lesefehler'));
+        reader.readAsDataURL(blob);
+      }));
+  }
+
+  function bildMasse(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      img.onerror = () => reject(new Error('Bild ungültig'));
+      img.src = dataUrl;
+    });
+  }
+
+  async function pdfSeiteBericht(doc, bericht, neueSeite, fortschrittCb) {
     if (neueSeite) doc.addPage();
     let y = 20;
+    const seitenhoehe = 280;
+
     doc.setFont('helvetica', 'bold'); doc.setFontSize(16);
     doc.text(bericht.tourTitel || 'Ohne Titel', 15, y); y += 9;
 
@@ -285,33 +307,108 @@
     doc.setFont('helvetica', 'normal');
     const text = doc.splitTextToSize(bericht.beschreibung || '–', 180);
     doc.text(text, 15, y);
-    y += text.length * 6 + 6;
+    y += text.length * 6 + 8;
 
     if (bericht.fotos && bericht.fotos.length) {
-      doc.setFont('helvetica', 'bold'); doc.text('Fotos (Links, Bilder siehe Website)', 15, y); y += 7;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-      bericht.fotos.forEach((f, i) => {
-        const zeile = doc.splitTextToSize(`${i + 1}. ${f.beschreibung ? f.beschreibung + ' – ' : ''}${f.url}`, 180);
-        doc.text(zeile, 15, y);
-        y += zeile.length * 5;
-      });
+      for (let i = 0; i < bericht.fotos.length; i++) {
+        const f = bericht.fotos[i];
+        if (fortschrittCb) fortschrittCb(i + 1, bericht.fotos.length);
+
+        if (y > seitenhoehe - 40) { doc.addPage(); y = 20; }
+
+        try {
+          const dataUrl = await bildAlsDataUrl(f.url);
+          const { w, h } = await bildMasse(dataUrl);
+          let breite = 170, hoehe = h * (breite / w);
+          const maxHoehe = 130;
+          if (hoehe > maxHoehe) { hoehe = maxHoehe; breite = w * (maxHoehe / h); }
+
+          if (y + hoehe > seitenhoehe) { doc.addPage(); y = 20; }
+
+          doc.addImage(dataUrl, 'JPEG', 15, y, breite, hoehe);
+          y += hoehe + 4;
+
+          if (f.beschreibung) {
+            doc.setFontSize(9);
+            const cap = doc.splitTextToSize(f.beschreibung, 170);
+            doc.text(cap, 15, y);
+            y += cap.length * 4.5 + 6;
+            doc.setFontSize(11);
+          } else {
+            y += 6;
+          }
+        } catch (err) {
+          console.error('Foto konnte nicht eingebettet werden:', f.url, err);
+          doc.setFontSize(9);
+          doc.text(`[Foto ${i + 1} konnte nicht geladen werden]`, 15, y);
+          y += 8;
+          doc.setFontSize(11);
+        }
+      }
     }
   }
 
-  document.getElementById('btnTourenPdfAlle').addEventListener('click', () => {
-    if (!vergangeneTouren.length) return;
+  async function baueKombiniertesPdf(tour, bericht, fortschrittCb) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    vergangeneTouren.forEach((t, i) => pdfSeiteTour(doc, t, i > 0));
-    doc.save(`vergangene-touren.pdf`);
+    if (tour) pdfSeiteTour(doc, tour, false);
+    if (bericht) await pdfSeiteBericht(doc, bericht, !!tour, fortschrittCb);
+    return doc;
+  }
+
+  function dateinameFuer(tour, bericht) {
+    if (tour) return `tour-${slug(tour.titel)}-${tour.datum}.pdf`;
+    return `bericht-${slug(bericht.tourTitel)}.pdf`;
+  }
+
+  document.getElementById('btnTourenPdfAlle').addEventListener('click', async () => {
+    if (!vergangeneTouren.length) return;
+    const btn = document.getElementById('btnTourenPdfAlle');
+    const fortschritt = document.getElementById('tourenFortschritt');
+    btn.disabled = true;
+    fortschritt.classList.add('show');
+
+    for (let i = 0; i < vergangeneTouren.length; i++) {
+      const tour = vergangeneTouren[i];
+      const passenderBericht = alleBerichte.find(b => b.tourId === tour.id);
+      fortschritt.textContent = `Erstelle PDF … Tour ${i + 1}/${vergangeneTouren.length}`;
+      try {
+        const doc = await baueKombiniertesPdf(tour, passenderBericht, (foto, gesamt) => {
+          fortschritt.textContent = `Erstelle PDF … Tour ${i + 1}/${vergangeneTouren.length}, Foto ${foto}/${gesamt}`;
+        });
+        doc.save(dateinameFuer(tour, null));
+      } catch (err) {
+        console.error('Fehler bei PDF für', tour.id, err);
+      }
+    }
+    fortschritt.textContent = 'Fertig.';
+    setTimeout(() => fortschritt.classList.remove('show'), 3000);
+    btn.disabled = false;
   });
 
-  document.getElementById('btnBerichtePdfAlle').addEventListener('click', () => {
+  document.getElementById('btnBerichtePdfAlle').addEventListener('click', async () => {
     if (!alleBerichte.length) return;
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    alleBerichte.forEach((b, i) => pdfSeiteBericht(doc, b, i > 0));
-    doc.save(`tourenberichte.pdf`);
+    const btn = document.getElementById('btnBerichtePdfAlle');
+    const fortschritt = document.getElementById('berichteFortschritt');
+    btn.disabled = true;
+    fortschritt.classList.add('show');
+
+    for (let i = 0; i < alleBerichte.length; i++) {
+      const bericht = alleBerichte[i];
+      const passendeTour = vergangeneTouren.find(t => t.id === bericht.tourId);
+      fortschritt.textContent = `Erstelle PDF … Bericht ${i + 1}/${alleBerichte.length}`;
+      try {
+        const doc = await baueKombiniertesPdf(passendeTour, bericht, (foto, gesamt) => {
+          fortschritt.textContent = `Erstelle PDF … Bericht ${i + 1}/${alleBerichte.length}, Foto ${foto}/${gesamt}`;
+        });
+        doc.save(dateinameFuer(passendeTour, bericht));
+      } catch (err) {
+        console.error('Fehler bei PDF für', bericht.id, err);
+      }
+    }
+    fortschritt.textContent = 'Fertig.';
+    setTimeout(() => fortschritt.classList.remove('show'), 3000);
+    btn.disabled = false;
   });
 
   async function loescheTourKomplett(tourId) {
@@ -348,10 +445,22 @@
     if (pdfBtn) {
       const tour = vergangeneTouren.find(t => t.id === pdfBtn.dataset.pdfTour);
       if (!tour) return;
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      pdfSeiteTour(doc, tour, false);
-      doc.save(`tour-${slug(tour.titel)}-${tour.datum}.pdf`);
+      const passenderBericht = alleBerichte.find(b => b.tourId === tour.id);
+
+      const originalLabel = pdfBtn.textContent;
+      pdfBtn.disabled = true;
+      pdfBtn.textContent = 'Erstelle …';
+      try {
+        const doc = await baueKombiniertesPdf(tour, passenderBericht, (foto, gesamt) => {
+          pdfBtn.textContent = `Foto ${foto}/${gesamt} …`;
+        });
+        doc.save(dateinameFuer(tour, null));
+      } catch (err) {
+        alert('Fehler beim Erstellen: ' + err.message);
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = originalLabel;
+      }
       return;
     }
     const delBtn = e.target.closest('[data-del-tour]');
@@ -423,10 +532,22 @@
     if (pdfBtn) {
       const bericht = alleBerichte.find(b => b.id === pdfBtn.dataset.pdfBericht);
       if (!bericht) return;
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      pdfSeiteBericht(doc, bericht, false);
-      doc.save(`bericht-${slug(bericht.tourTitel)}.pdf`);
+      const passendeTour = vergangeneTouren.find(t => t.id === bericht.tourId);
+
+      const originalLabel = pdfBtn.textContent;
+      pdfBtn.disabled = true;
+      pdfBtn.textContent = 'Erstelle …';
+      try {
+        const doc = await baueKombiniertesPdf(passendeTour, bericht, (foto, gesamt) => {
+          pdfBtn.textContent = `Foto ${foto}/${gesamt} …`;
+        });
+        doc.save(dateinameFuer(passendeTour, bericht));
+      } catch (err) {
+        alert('Fehler beim Erstellen: ' + err.message);
+      } finally {
+        pdfBtn.disabled = false;
+        pdfBtn.textContent = originalLabel;
+      }
       return;
     }
     const delBtn = e.target.closest('[data-del-bericht]');
