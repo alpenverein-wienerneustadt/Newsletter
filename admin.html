@@ -187,15 +187,30 @@
 
   function cardHtml(u) {
     const badgeLabel = { ausstehend: 'Ausstehend', genehmigt: 'Genehmigt', gesperrt: 'Gesperrt' }[u.status] || u.status;
+    const rollen = u.rollen || [];
+    const checkbox = (wert, label) => `
+      <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:12.5px;">
+        <input type="checkbox" class="rollen-checkbox" data-uid="${u.id}" value="${wert}" style="width:auto;" ${rollen.includes(wert) ? 'checked' : ''}> ${label}
+      </label>`;
+
     return `
-      <div class="user-card">
-        <div class="user-info">
-          <p class="user-name">${escapeHtml(u.name || u.email)}</p>
-          <p class="user-meta">${escapeHtml(u.email)} · ${escapeHtml((u.rollen || []).join(', ') || '–')} · <span class="badge ${u.status}">${badgeLabel}</span></p>
+      <div class="user-card" style="flex-direction:column;align-items:stretch;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+          <div class="user-info">
+            <p class="user-name">${escapeHtml(u.name || u.email)}</p>
+            <p class="user-meta">${escapeHtml(u.email)} · <span class="badge ${u.status}">${badgeLabel}</span></p>
+          </div>
+          <div class="user-actions">
+            ${u.status !== 'genehmigt' ? `<button class="action genehmigen" data-uid="${u.id}" data-status="genehmigt">Genehmigen</button>` : ''}
+            ${u.status !== 'gesperrt' ? `<button class="action sperren" data-uid="${u.id}" data-status="gesperrt">Sperren</button>` : ''}
+          </div>
         </div>
-        <div class="user-actions">
-          ${u.status !== 'genehmigt' ? `<button class="action genehmigen" data-uid="${u.id}" data-status="genehmigt">Genehmigen</button>` : ''}
-          ${u.status !== 'gesperrt' ? `<button class="action sperren" data-uid="${u.id}" data-status="gesperrt">Sperren</button>` : ''}
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid var(--paper-2);">
+          ${checkbox('tourenfuehrer', 'Tourenführer:in')}
+          ${checkbox('social-media', 'Social Media')}
+          ${checkbox('vorstand', 'Vorstand')}
+          <button type="button" class="action rollen-speichern" data-uid="${u.id}" style="padding:6px 12px;font-size:12.5px;">Rollen speichern</button>
+          <span class="rollen-status" id="rollenStatus-${u.id}" style="font-size:12px;color:var(--forest-dk);"></span>
         </div>
       </div>`;
   }
@@ -209,6 +224,36 @@
       alert('Fehler beim Aktualisieren: ' + err.message);
     }
   }
+
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('button.rollen-speichern');
+    if (!btn) return;
+    const uid = btn.dataset.uid;
+
+    const checkboxen = document.querySelectorAll(`.rollen-checkbox[data-uid="${uid}"]`);
+    const neueRollen = Array.from(checkboxen).filter(cb => cb.checked).map(cb => cb.value);
+
+    if (neueRollen.length === 0) {
+      alert('Mindestens eine Rolle muss ausgewählt sein.');
+      return;
+    }
+    if (uid === auth.currentUser.uid && !neueRollen.includes('vorstand')) {
+      if (!confirm('Du entfernst dir selbst die Vorstands-Rolle. Danach hast du keinen Zugriff mehr auf diesen Bereich. Wirklich fortfahren?')) return;
+    }
+
+    const statusEl = document.getElementById(`rollenStatus-${uid}`);
+    btn.disabled = true;
+    try {
+      await db.collection('users').doc(uid).update({ rollen: neueRollen });
+      statusEl.textContent = 'Gespeichert.';
+      setTimeout(() => { statusEl.textContent = ''; }, 3000);
+    } catch (err) {
+      console.error(err);
+      alert('Fehler beim Speichern der Rollen: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   function escapeHtml(str) {
     const div = document.createElement('div');
