@@ -11,15 +11,15 @@
 
 <style>
   :root{
-    --paper:#F4F2EA; --paper-2:#ECE8DB; --ink:#22261F; --ink-soft:#565A4E;
-    --line:#C9C4B2; --forest:#3F5A3D; --forest-dk:#2C4029; --trail:#9C6B3E; --error:#A5432E;
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
   body{
     background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
     font-size:16px; line-height:1.55;
-    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
     background-size: 22px 22px;
   }
   .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
@@ -84,7 +84,7 @@
 
   .loading, .empty{ text-align:center; color:var(--ink-soft); padding:60px 20px; font-size:14.5px; }
   .config-warning{
-    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
@@ -184,6 +184,8 @@
       <dl class="facts">
         ${kurs.datum ? `<div class="fact"><dt>Datum</dt><dd>${formatDatum(kurs.datum)}</dd></div>` : ''}
         ${kurs.ort ? `<div class="fact"><dt>Ort</dt><dd>${escapeHtml(kurs.ort)}</dd></div>` : ''}
+        ${(kurs.zeitVon || kurs.zeitBis) ? `<div class="fact"><dt>Uhrzeit</dt><dd>${kurs.zeitVon || ''}${kurs.zeitVon && kurs.zeitBis ? ' – ' : ''}${kurs.zeitBis || ''} Uhr</dd></div>` : ''}
+        ${kurs.dauer ? `<div class="fact"><dt>Kursdauer</dt><dd>${escapeHtml(kurs.dauer)}</dd></div>` : ''}
         ${kurs.mindestalter ? `<div class="fact"><dt>Mindestalter</dt><dd>${kurs.mindestalter} Jahre</dd></div>` : ''}
         <div class="fact"><dt>Kosten Mitglieder</dt><dd>${kurs.kostenMitglied ? kurs.kostenMitglied + ' €' : 'kostenlos'}</dd></div>
         <div class="fact"><dt>Kosten Nicht-Mitglieder</dt><dd>${kurs.kostenNichtmitglied ? kurs.kostenNichtmitglied + ' €' : 'kostenlos'}</dd></div>
@@ -198,20 +200,19 @@
         <h2>Anmeldung</h2>
         ${platzText}
         <form id="anmeldeForm" novalidate>
-          <div class="field" id="f-name">
-            <label for="name">Name</label>
-            <input type="text" id="name" required>
-            <p class="field-error">Bitte deinen Namen angeben.</p>
+          <div class="field" id="f-anzahlPersonen">
+            <label for="anzahlPersonen">Anzahl Personen</label>
+            <select id="anzahlPersonen" required>
+              <option value="1" selected>1 Person</option>
+              <option value="2">2 Personen</option>
+              <option value="3">3 Personen</option>
+              <option value="4">4 Personen</option>
+              <option value="5">5 Personen</option>
+            </select>
           </div>
-          ${kurs.mindestalter ? `
-          <div class="field" id="f-geburtsdatum">
-            <label for="geburtsdatum">Geburtsdatum <span class="opt">(Mindestalter ${kurs.mindestalter} Jahre – wird geprüft)</span></label>
-            <input type="date" id="geburtsdatum" required>
-            <p class="field-error">Bitte Geburtsdatum angeben.</p>
-          </div>` : `
-          <div class="field" id="f-geburtsdatum" style="display:none">
-            <input type="date" id="geburtsdatum">
-          </div>`}
+
+          <div id="personenContainer"></div>
+
           <div class="field" id="f-telefon">
             <label for="telefon">Telefonnummer <span class="opt">(oder E-Mail unten)</span></label>
             <input type="tel" id="telefon">
@@ -221,21 +222,50 @@
             <input type="email" id="email">
             <p class="field-error">Bitte Telefonnummer oder E-Mail angeben.</p>
           </div>
-          <div class="field" id="f-mitglied">
-            <label>Mitgliedsstatus</label>
-            <div class="radio-group">
-              <label><input type="radio" name="mitglied" value="ja" required> Mitglied</label>
-              <label><input type="radio" name="mitglied" value="nein"> Nicht-Mitglied</label>
-            </div>
-            <p class="field-error">Bitte Mitgliedsstatus angeben.</p>
-          </div>
+
           <button type="submit" id="submitBtn">Anmelden</button>
           <p class="status-msg" id="statusMsg"></p>
         </form>
       </div>
     `;
 
+    renderPersonenFelder(kurs.mindestalter, 1);
+    document.getElementById('anzahlPersonen').addEventListener('change', (e) => {
+      renderPersonenFelder(kurs.mindestalter, parseInt(e.target.value, 10) || 1);
+    });
     document.getElementById('anmeldeForm').addEventListener('submit', (e) => handleAnmeldung(e, db, kurs, hatKapazitaet));
+  }
+
+  function renderPersonenFelder(mindestalter, anzahl) {
+    const container = document.getElementById('personenContainer');
+    let html = '';
+    for (let i = 1; i <= anzahl; i++) {
+      const titel = anzahl === 1 ? 'Deine Daten' : `Person ${i}${i === 1 ? ' (du selbst)' : ''}`;
+      html += `
+        <div style="border-top:1px solid var(--paper-2); padding-top:16px; margin-top:${i === 1 ? '4' : '16'}px;">
+          <p style="font-size:13px; font-weight:600; color:var(--trail); margin:0 0 12px;">${titel}</p>
+          <div class="field" id="f-name-${i}">
+            <label for="name-${i}">Name</label>
+            <input type="text" id="name-${i}" required>
+            <p class="field-error">Bitte Namen angeben.</p>
+          </div>
+          ${mindestalter ? `
+          <div class="field" id="f-geburtsdatum-${i}">
+            <label for="geburtsdatum-${i}">Geburtsdatum <span class="opt">(Mindestalter ${mindestalter} Jahre – wird geprüft)</span></label>
+            <input type="date" id="geburtsdatum-${i}" required>
+            <p class="field-error">Bitte Geburtsdatum angeben.</p>
+          </div>` : `<input type="hidden" id="geburtsdatum-${i}">`}
+          <div class="field" id="f-mitglied-${i}">
+            <label>Mitgliedsstatus</label>
+            <div class="radio-group">
+              <label><input type="radio" name="mitglied-${i}" value="ja" required> Mitglied</label>
+              <label><input type="radio" name="mitglied-${i}" value="nein"> Nicht-Mitglied</label>
+            </div>
+            <p class="field-error">Bitte Mitgliedsstatus angeben.</p>
+          </div>
+        </div>`;
+    }
+    container.innerHTML = html;
   }
 
   function normalizeId(str) {
@@ -252,18 +282,29 @@
     const statusMsg = document.getElementById('statusMsg');
     statusMsg.className = 'status-msg';
 
-    const name = document.getElementById('name').value.trim();
-    const geburtsdatum = document.getElementById('geburtsdatum').value;
+    const anzahlPersonen = parseInt(document.getElementById('anzahlPersonen').value, 10) || 1;
     const telefon = document.getElementById('telefon').value.trim();
     const email = document.getElementById('email').value.trim();
-    const mitgliedEl = document.querySelector('input[name=mitglied]:checked');
 
     let valid = true;
-    toggleInvalid('f-name', !name);
     toggleInvalid('f-email', !telefon && !email);
-    toggleInvalid('f-mitglied', !mitgliedEl);
-    if (kurs.mindestalter) toggleInvalid('f-geburtsdatum', !geburtsdatum);
-    if (!name || (!telefon && !email) || !mitgliedEl || (kurs.mindestalter && !geburtsdatum)) valid = false;
+    if (!telefon && !email) valid = false;
+
+    const personen = [];
+    for (let i = 1; i <= anzahlPersonen; i++) {
+      const nameEl = document.getElementById(`name-${i}`);
+      const geburtsdatumEl = document.getElementById(`geburtsdatum-${i}`);
+      const mitgliedEl = document.querySelector(`input[name=mitglied-${i}]:checked`);
+      const name = nameEl.value.trim();
+      const geburtsdatum = geburtsdatumEl.value;
+
+      toggleInvalid(`f-name-${i}`, !name);
+      toggleInvalid(`f-mitglied-${i}`, !mitgliedEl);
+      if (kurs.mindestalter) toggleInvalid(`f-geburtsdatum-${i}`, !geburtsdatum);
+      if (!name || !mitgliedEl || (kurs.mindestalter && !geburtsdatum)) valid = false;
+
+      personen.push({ name, geburtsdatum: geburtsdatum || null, mitglied: mitgliedEl ? mitgliedEl.value === 'ja' : null });
+    }
 
     if (!valid) {
       statusMsg.textContent = 'Bitte die markierten Felder ausfüllen.';
@@ -271,13 +312,15 @@
       return;
     }
 
-    // Filter nach Kursvorgabe: Mindestalter – blockiert die Anmeldung, statt sie nur zu vermerken
+    // Filter nach Kursvorgabe: Mindestalter – blockiert die Anmeldung für JEDE Person einzeln
     if (kurs.mindestalter) {
-      const alter = berechneAlter(geburtsdatum);
-      if (alter < kurs.mindestalter) {
-        statusMsg.textContent = `Für diesen Kurs ist ein Mindestalter von ${kurs.mindestalter} Jahren erforderlich. Du bist ${alter}.`;
-        statusMsg.classList.add('show', 'err');
-        return;
+      for (const p of personen) {
+        const alter = berechneAlter(p.geburtsdatum);
+        if (alter < kurs.mindestalter) {
+          statusMsg.textContent = `Für diesen Kurs ist ein Mindestalter von ${kurs.mindestalter} Jahren erforderlich. ${p.name} ist ${alter}.`;
+          statusMsg.classList.add('show', 'err');
+          return;
+        }
       }
     }
 
@@ -296,28 +339,32 @@
         if (hatKapazitaet) {
           const kursSnap = await tx.get(kursRef);
           bestaetigt = kursSnap.data().bestaetigtAnzahl || 0;
-          neuerStatus = bestaetigt < kurs.maxTeilnehmer ? 'angemeldet' : 'warteliste';
+          neuerStatus = (bestaetigt + anzahlPersonen) <= kurs.maxTeilnehmer ? 'angemeldet' : 'warteliste';
         }
 
         tx.set(anmeldungRef, {
-          name, telefon: telefon || null, email: email || null,
-          mitglied: mitgliedEl.value === 'ja',
-          geburtsdatum: geburtsdatum || null,
+          name: personen[0].name, telefon: telefon || null, email: email || null,
+          mitglied: personen[0].mitglied,
+          personen,
+          anzahlPersonen,
           status: neuerStatus,
           angemeldetAm: firebase.firestore.FieldValue.serverTimestamp()
         });
 
         if (hatKapazitaet && neuerStatus === 'angemeldet') {
-          tx.update(kursRef, { bestaetigtAnzahl: bestaetigt + 1 });
+          tx.update(kursRef, { bestaetigtAnzahl: bestaetigt + anzahlPersonen });
         }
         return neuerStatus;
       });
 
+      const personText = anzahlPersonen === 1 ? '' : ` (${anzahlPersonen} Personen)`;
       statusMsg.textContent = status === 'angemeldet'
-        ? 'Anmeldung erfolgreich – dein Platz ist reserviert.'
-        : 'Anmeldung erfolgreich – du stehst auf der Warteliste.';
+        ? `Anmeldung erfolgreich${personText} – euer Platz ist reserviert.`
+        : `Anmeldung erfolgreich${personText} – ihr steht auf der Warteliste.`;
       statusMsg.classList.add('show', 'ok');
       document.getElementById('anmeldeForm').reset();
+      renderPersonenFelder(kurs.mindestalter, 1);
+      document.getElementById('anzahlPersonen').value = '1';
     } catch (err) {
       console.error(err);
       if (err.code === 'permission-denied') {

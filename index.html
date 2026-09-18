@@ -18,15 +18,15 @@
 
 <style>
   :root{
-    --paper:      #F4F2EA;
-    --paper-2:    #ECE8DB;
-    --ink:        #22261F;
-    --ink-soft:   #565A4E;
-    --line:       #C9C4B2;
-    --forest:     #3F5A3D;
-    --forest-dk:  #2C4029;
-    --trail:      #9C6B3E;
-    --error:      #A5432E;
+    --paper:      #FFFFFF;
+    --paper-2:    #F1F3EF;
+    --ink:        #2A2C31;
+    --ink-soft:   #50535B;
+    --line:       #DDE1DB;
+    --forest:     #4C9A2A;
+    --forest-dk:  #3D7A21;
+    --trail:      #58B030;
+    --error:      #B3261E;
   }
   *{ box-sizing:border-box; }
   html,body{ margin:0; padding:0; }
@@ -36,21 +36,24 @@
     font-family:'Inter', system-ui, sans-serif;
     font-size:16px;
     line-height:1.5;
-    background-image: radial-gradient(circle at 1px 1px, rgba(34,38,31,0.06) 1px, transparent 0);
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
     background-size: 22px 22px;
   }
 
   .page{ max-width: 760px; margin:0 auto; padding: 40px 20px 80px; }
 
-  header.masthead{ margin-bottom: 30px; }
-  .contour{ width:100%; height:46px; display:block; margin-bottom:18px; opacity:0.55; }
-  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
-  .eyebrow-line svg{ flex-shrink:0; }
+  header.masthead{ margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--line); }
+  .brand-logo{ height: 48px; width: auto; display: block; margin-bottom: 20px; }
   h1{
     font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
-    font-size: clamp(30px, 6vw, 40px); line-height:1.08; margin:0 0 8px; color:var(--forest-dk);
+    font-size: clamp(28px, 6vw, 36px); line-height:1.08; margin:0 0 8px; color:var(--ink);
   }
   .sub{ color:var(--ink-soft); font-size:15px; max-width:52ch; }
+
+  .section-heading{
+    font-family:'Fraunces', serif; font-weight:600; font-size:22px; color:var(--forest-dk);
+    margin: 8px 0 14px;
+  }
 
   nav.top{
     display:flex; gap:14px; margin-top:20px; flex-wrap:wrap;
@@ -92,7 +95,7 @@
     font-size:12px; padding:3px 10px; border-radius:20px;
     background:var(--paper-2); color:var(--ink-soft);
   }
-  .tag.schwierigkeit-schwer{ background:#F3E1DB; color:#7A4322; }
+  .tag.schwierigkeit-schwer{ background:#F3E1DB; color:#8A2A22; }
   .tag.schwierigkeit-mittel{ background:#EFE7D0; color:#6B5A24; }
   .tag.schwierigkeit-leicht{ background:#E3EAE0; color:var(--forest-dk); }
 
@@ -147,11 +150,23 @@
   .content-card .text{ font-size:14px; color:var(--ink); white-space:pre-line; margin:0; }
   .content-card .foto-galerie{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
   .content-card .foto-galerie figure{ margin:0; width:96px; }
-  .content-card .foto-galerie img{ width:96px; height:96px; object-fit:cover; border-radius:2px; display:block; }
+  .content-card .foto-galerie img{ width:96px; height:96px; object-fit:cover; border-radius:2px; display:block; cursor:pointer; transition: opacity .15s ease; }
+  .content-card .foto-galerie img:hover{ opacity:0.85; }
   .content-card .foto-galerie figcaption{ font-size:11px; color:var(--ink-soft); margin-top:3px; }
 
+  #lightbox{
+    display:none; position:fixed; inset:0; background:rgba(20,22,18,0.92); z-index:200;
+    align-items:center; justify-content:center; padding:24px; cursor:zoom-out;
+  }
+  #lightbox.show{ display:flex; }
+  #lightbox img{ max-width:100%; max-height:100%; object-fit:contain; border-radius:2px; }
+  #lightbox .lightbox-close{
+    position:absolute; top:16px; right:20px; color:#fff; font-size:32px; line-height:1;
+    background:none; border:none; cursor:pointer;
+  }
+
   .config-warning{
-    background:#FBEFE8; border:1px solid #E3B896; color:#7A4322; font-size:13.5px;
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
@@ -161,19 +176,10 @@
 
 <div class="page">
   <header class="masthead">
-    <svg class="contour" viewBox="0 0 600 46" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0 36 C 40 10, 80 40, 120 22 S 200 4, 240 26 S 320 42, 360 18 S 440 6, 480 24 S 560 38, 600 14" fill="none" stroke="#3F5A3D" stroke-width="1.2"/>
-      <path d="M0 30 C 40 6, 80 32, 120 16 S 200 -2, 240 18 S 320 34, 360 12 S 440 0, 480 16 S 560 30, 600 8" fill="none" stroke="#9C6B3E" stroke-width="1" opacity="0.6"/>
-    </svg>
-    <div class="eyebrow-line">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#9C6B3E" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
-      Tourenführer Portal
-    </div>
-    <h1>Aktuelle Touren</h1>
-    <p class="sub">Alle ausgeschriebenen Touren auf einen Blick. Anmeldung direkt bei der jeweiligen Tour.</p>
-    <nav class="top" id="navLinks">
-      <a href="login.html">Login für Tourenführer</a>
-    </nav>
+    <img src="alpenverein-logo.png" alt="Alpenverein Wiener Neustadt" class="brand-logo">
+    <h1>Übersicht</h1>
+    <p class="sub">Alle Touren, Veranstaltungen, Kurse und Infos auf einen Blick.</p>
+    <nav class="top" id="navLinks"></nav>
   </header>
 
   <div class="config-warning" id="configWarning">
@@ -183,6 +189,7 @@
   <div id="aktuelleInfosSection"></div>
   <div id="veranstaltungenSection"></div>
 
+  <p class="section-heading">Aktuelle Touren</p>
   <div class="filters" id="filters">
     <button class="filter-btn active" data-filter="alle">Alle</button>
     <button class="filter-btn" data-filter="wandern">Wandern</button>
@@ -213,6 +220,11 @@
   </div>
 
   <footer class="note">Nur Touren mit Status „geplant" werden angezeigt.</footer>
+</div>
+
+<div id="lightbox" onclick="schliesseLightbox()">
+  <button class="lightbox-close" onclick="schliesseLightbox()">&times;</button>
+  <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -296,13 +308,27 @@
     return `${t}.${m}.${j}`;
   }
 
+  function linkHtml(link) {
+    if (!link) return '';
+    return `<p class="text"><a href="${escapeHtml(link)}" target="_blank" rel="noopener" style="color:var(--forest-dk); font-weight:600;">${escapeHtml(link)} →</a></p>`;
+  }
+
   function fotosHtml(fotos) {
     if (!fotos || !fotos.length) return '';
     return `<div class="foto-galerie">` + fotos.map(f => `
       <figure>
-        <img src="${cloudinaryOptimiert(f.url, 240)}" alt="" loading="lazy">
+        <img src="${cloudinaryOptimiert(f.url, 240)}" alt="" loading="lazy" onclick="oeffneLightbox('${f.url.replace(/'/g, "\\'")}')">
         ${f.beschreibung ? `<figcaption>${escapeHtml(f.beschreibung)}</figcaption>` : ''}
       </figure>`).join('') + `</div>`;
+  }
+
+  function oeffneLightbox(url) {
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightbox').classList.add('show');
+  }
+  function schliesseLightbox() {
+    document.getElementById('lightbox').classList.remove('show');
+    document.getElementById('lightboxImg').src = '';
   }
 
   // Liefert automatisch verkleinerte, formatoptimierte (WebP/AVIF) Version statt des Originals.
@@ -320,7 +346,7 @@
       el.innerHTML = `<div class="content-section"><p class="group-title">Aktuelles</p>` +
         snap.docs.map(d => {
           const i = d.data();
-          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${fotosHtml(i.fotos)}</div>`;
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${linkHtml(i.link)}${fotosHtml(i.fotos)}</div>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -347,7 +373,8 @@
       el.innerHTML = `<div class="content-section"><p class="group-title">Kurse</p>` +
         snap.docs.map(d => {
           const k = d.data();
-          const meta = [k.datum ? formatDatumLang(k.datum) : null, k.ort, k.mindestalter ? `ab ${k.mindestalter} Jahren` : null].filter(Boolean).join(' · ');
+          const zeitText = (k.zeitVon || k.zeitBis) ? `${k.zeitVon || ''}${k.zeitVon && k.zeitBis ? '–' : ''}${k.zeitBis || ''} Uhr` : null;
+          const meta = [k.datum ? formatDatumLang(k.datum) : null, zeitText, k.dauer, k.ort, k.mindestalter ? `ab ${k.mindestalter} Jahren` : null].filter(Boolean).join(' · ');
           return `<a class="content-card" href="kurs-detail.html?id=${d.id}"><p class="titel">${escapeHtml(k.titel)}</p>${meta ? `<p class="meta">${escapeHtml(meta)}</p>` : ''}<p class="text">${escapeHtml(k.beschreibung)}</p></a>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
@@ -361,7 +388,7 @@
       el.innerHTML = `<div class="content-section"><p class="group-title">Allgemeine Infos</p>` +
         snap.docs.map(d => {
           const i = d.data();
-          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${fotosHtml(i.fotos)}</div>`;
+          return `<div class="content-card"><p class="titel">${escapeHtml(i.titel)}</p><p class="text">${escapeHtml(i.inhalt)}</p>${linkHtml(i.link)}${fotosHtml(i.fotos)}</div>`;
         }).join('') + `</div>`;
     } catch (err) { console.error(err); }
   }
@@ -370,19 +397,19 @@
     const nav = document.getElementById('navLinks');
     firebase.auth().onAuthStateChanged(async (user) => {
       if (!user) {
-        nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+        nav.innerHTML = '';
         return;
       }
       try {
         const doc = await db.collection('users').doc(user.uid).get();
         const profil = doc.exists ? doc.data() : null;
         if (profil && profil.status === 'genehmigt') {
-          nav.innerHTML = '<a href="dashboard.html">Zur Übersicht</a>';
+          nav.innerHTML = '<a href="dashboard.html">← Zurück zum Dashboard</a>';
         } else {
-          nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+          nav.innerHTML = '';
         }
       } catch (err) {
-        nav.innerHTML = '<a href="login.html">Login für Tourenführer</a>';
+        nav.innerHTML = '';
       }
     });
   }
