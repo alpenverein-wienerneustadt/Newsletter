@@ -5,7 +5,8 @@
 const CACHE_NAME = 'tourenportal-shell-v1';
 const SHELL_FILES = [
   'dashboard.html',
-  'login.html'
+  'login.html',
+  'index.html'
 ];
 
 self.addEventListener('install', (event) => {
