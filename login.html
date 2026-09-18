@@ -141,24 +141,12 @@
       <input type="password" id="regPasswort" required>
       <p class="field-error">Passwort muss mind. 6 Zeichen haben.</p>
     </div>
-    <div class="field" id="f-regRollen">
-      <label>Ich möchte werden</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:14.5px;">
-          <input type="checkbox" id="rolleTourenfuehrer" style="width:auto;"> Tourenführer:in <span style="color:var(--ink-soft)">– Touren ausschreiben, Berichte schreiben</span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:14.5px;">
-          <input type="checkbox" id="rolleSocialMedia" style="width:auto;"> Social Media <span style="color:var(--ink-soft)">– Export-Tool für Facebook/Instagram</span>
-        </label>
-      </div>
-      <p class="field-error">Bitte mindestens eine Rolle auswählen.</p>
-    </div>
     <button type="submit" id="registerBtn">Registrieren</button>
     <p class="status-msg" id="registerStatus"></p>
   </form>
 
   <div class="hinweis">
-    Nach der Registrierung prüft der Vorstand deinen Account. Erst danach hast du Zugriff auf die gewählten Bereiche.
+    Nach der Registrierung schaltet der Vorstand deinen Account frei und weist dir die passenden Bereiche zu.
   </div>
 </div>
 
@@ -251,15 +239,11 @@
     const name = document.getElementById('regName').value.trim();
     const email = document.getElementById('regEmail').value.trim();
     const passwort = document.getElementById('regPasswort').value;
-    const rollen = [];
-    if (document.getElementById('rolleTourenfuehrer').checked) rollen.push('tourenfuehrer');
-    if (document.getElementById('rolleSocialMedia').checked) rollen.push('social-media');
 
     toggleInvalid('f-regName', !name);
     toggleInvalid('f-regEmail', !email);
     toggleInvalid('f-regPasswort', passwort.length < 6);
-    toggleInvalid('f-regRollen', rollen.length === 0);
-    if (!name || !email || passwort.length < 6 || rollen.length === 0) {
+    if (!name || !email || passwort.length < 6) {
       statusMsg.textContent = 'Bitte die markierten Felder korrekt ausfüllen.';
       statusMsg.classList.add('show', 'err');
       return;
@@ -274,7 +258,7 @@
 
       await db.collection('users').doc(cred.user.uid).set({
         name, email,
-        rollen,
+        rollen: [],
         status: 'ausstehend',
         registriertAm: firebase.firestore.FieldValue.serverTimestamp()
       });
