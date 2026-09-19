@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Touren bearbeiten – Tourenführer Portal</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4C9A2A">
+<link rel="icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#FFFFFF; --paper-2:#F1F3EF; --ink:#2A2C31; --ink-soft:#50535B;
+    --line:#DDE1DB; --forest:#4C9A2A; --forest-dk:#3D7A21; --trail:#58B030; --error:#B3261E;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper); color:var(--ink); font-family:'Inter', system-ui, sans-serif;
+    font-size:16px; line-height:1.5;
+    background-image: radial-gradient(circle at 1px 1px, rgba(42,44,49,0.06) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width:640px; margin:0 auto; padding:40px 20px 80px; }
+
+  .eyebrow-line{ display:flex; align-items:center; gap:10px; color:var(--trail); font-size:13px; margin-bottom:10px; }
+  h1{
+    font-family:'Fraunces', serif; font-weight:600; font-optical-sizing:auto;
+    font-size:clamp(28px, 6vw, 36px); line-height:1.1; margin:0 0 8px; color:var(--forest-dk);
+  }
+  .sub{ color:var(--ink-soft); font-size:14.5px; margin-bottom:8px; }
+  .sub a{ color:var(--forest-dk); }
+
+  .auth-box{
+    background:#fff; border:1px solid var(--line); border-radius:3px;
+    padding:22px 24px; margin:24px 0; font-size:14.5px; color:var(--ink-soft);
+  }
+  .auth-box.err{ border-color:#F0B4AE; background:#FDECEA; color:#8A2A22; }
+  .auth-box a{ color:var(--forest-dk); font-weight:600; }
+
+  .tour-card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:16px 18px; margin-bottom:10px;
+    display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;
+    text-decoration:none; color:inherit;
+  }
+  .tour-card:hover{ border-color:var(--forest); }
+  .tour-card .titel{ font-weight:600; font-size:14.5px; }
+  .tour-card .meta{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .empty{ color:var(--ink-soft); font-size:14px; padding:12px 0; }
+
+  form{ background:#fff; border:1px solid var(--line); border-radius:3px; box-shadow:0 1px 0 rgba(42,44,49,0.03); }
+  .section{ padding:26px 26px 8px; border-bottom:1px solid var(--paper-2); }
+  .section:last-of-type{ border-bottom:none; }
+  .section-title{ font-family:'Fraunces', serif; font-size:18px; font-weight:600; color:var(--forest-dk); margin:0 0 4px; }
+
+  .field{ margin-bottom:20px; }
+  .row{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:520px){ .row{ grid-template-columns:1fr; } }
+
+  label{ display:block; font-size:13.5px; font-weight:600; margin-bottom:6px; }
+  label .opt{ font-weight:400; color:var(--ink-soft); }
+
+  input[type=text], input[type=date], input[type=time], input[type=number], select, textarea{
+    width:100%; font-family:inherit; font-size:15px; color:var(--ink);
+    background:var(--paper); border:1px solid var(--line); border-radius:2px; padding:11px 12px;
+  }
+  textarea{ resize:vertical; min-height:90px; }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--forest); background:#fff; }
+
+  .field-error{ display:none; font-size:12.5px; color:var(--error); margin-top:5px; }
+  .field.invalid input, .field.invalid select, .field.invalid textarea{ border-color:var(--error); }
+  .field.invalid .field-error{ display:block; }
+
+  .actions{ padding:24px 26px 28px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  button[type=submit]{
+    font-family:'Inter', sans-serif; font-weight:600; font-size:15px; color:#fff;
+    background:var(--forest); border:none; border-radius:2px; padding:13px 26px; cursor:pointer;
+  }
+  button[type=submit]:hover{ background:var(--forest-dk); }
+  button[type=submit]:disabled{ background:var(--line); cursor:not-allowed; }
+
+  .status-msg{ font-size:14px; display:none; }
+  .status-msg.show{ display:block; }
+  .status-msg.ok{ color:var(--forest-dk); }
+  .status-msg.err{ color:var(--error); }
+
+  .config-warning{
+    background:#FDECEA; border:1px solid #F0B4AE; color:#8A2A22; font-size:13.5px;
+    padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
+  }
+  .config-warning.show{ display:block; }
+
+  .versionen{ margin-top:28px; }
+  .versionen h2{ font-family:'Fraunces', serif; font-size:17px; color:var(--forest-dk); margin:0 0 10px; }
+  details.version{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:12px 16px; margin-bottom:8px; font-size:13.5px;
+  }
+  details.version summary{ cursor:pointer; font-weight:600; color:var(--ink-soft); }
+  details.version .alt-feld{ margin:4px 0 0 4px; color:var(--ink-soft); }
+  details.version .alt-feld b{ color:var(--ink); font-weight:600; }
+
+  .teilnehmer-card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:12px 16px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;
+  }
+  .teilnehmer-card .name{ font-weight:600; font-size:14px; }
+  .teilnehmer-card .meta{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .teilnehmer-card .person-zeile{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+  .badge-status{ font-size:11px; padding:3px 9px; border-radius:20px; flex-shrink:0; }
+  .badge-status.bestaetigt{ background:#E3EAE0; color:var(--forest-dk); }
+  .badge-status.warteliste{ background:#EFE7D0; color:#6B5A24; }
+  .badge-status.anfrage{ background:var(--forest); color:#fff; }
+  .badge-status.abgelehnt{ background:#F1F3EF; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="eyebrow-line">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 12L5 4L8 9L10 5L13 12" stroke="#58B030" stroke-width="1.3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+    Tourenführer Portal
+  </div>
+  <h1 id="pageTitle">Touren bearbeiten</h1>
+  <p class="sub" id="pageSub">Wähle eine Tour aus, um sie zu bearbeiten. Vergangene Touren findest du im <a href="vorstand-archiv.html">Archiv</a>. <a href="dashboard.html">← Zur Übersicht</a></p>
+
+  <div class="config-warning" id="configWarning">
+    Firebase ist noch nicht verbunden. Trag deine Projekt-Konfiguration im Script-Block am Ende der Datei ein.
+  </div>
+
+  <div id="authGate" class="auth-box"><p>Anmeldestatus wird geprüft …</p></div>
+
+  <div id="listeContainer" style="display:none"></div>
+
+  <form id="editForm" novalidate style="display:none">
+    <div class="section">
+      <p class="section-title">Eckdaten</p>
+      <div class="field" id="f-titel">
+        <label for="titel">Titel der Tour</label>
+        <input type="text" id="titel" required>
+        <p class="field-error">Bitte einen Titel eingeben.</p>
+      </div>
+      <div class="row">
+        <div class="field" id="f-datum">
+          <label for="datum">Datum</label>
+          <input type="date" id="datum" required>
+        </div>
+        <div class="field" id="f-datumEnde">
+          <label for="datumEnde">Enddatum <span class="opt">(optional)</span></label>
+          <input type="date" id="datumEnde">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" id="f-treffpunkt">
+          <label for="treffpunkt">Treffpunkt</label>
+          <input type="text" id="treffpunkt" required>
+        </div>
+        <div class="field" id="f-treffzeit">
+          <label for="treffzeit">Treffzeit</label>
+          <input type="time" id="treffzeit" required>
+        </div>
+      </div>
+      <div class="field" id="f-status">
+        <label for="status">Status</label>
+        <select id="status">
+          <option value="geplant">Geplant</option>
+          <option value="durchgeführt">Durchgeführt</option>
+          <option value="abgesagt">Abgesagt</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Anforderungen</p>
+      <div class="row">
+        <div class="field" id="f-disziplin">
+          <label for="disziplin">Disziplin</label>
+          <select id="disziplin" required>
+            <option value="wandern">Wandern</option>
+            <option value="klettersteig">Klettersteig</option>
+            <option value="klettertour">Klettertour</option>
+            <option value="hochtour">Hochtour</option>
+            <option value="schitour">Schitour</option>
+            <option value="schneeschuh">Schneeschuh</option>
+            <option value="mountainbike">Mountainbike</option>
+          </select>
+        </div>
+        <div class="field" id="f-schwierigkeit">
+          <label for="schwierigkeit">Schwierigkeit</label>
+          <select id="schwierigkeit" required>
+            <option value="leicht">Leicht</option>
+            <option value="mittel">Mittel</option>
+            <option value="schwer">Schwer</option>
+          </select>
+        </div>
+      </div>
+      <div class="field" id="f-maxTeilnehmer">
+        <label for="maxTeilnehmer">Max. Teilnehmerzahl</label>
+        <input type="number" id="maxTeilnehmer" min="1" step="1" required>
+      </div>
+      <div class="field" id="f-anmeldeschluss">
+        <label for="anmeldeschluss">Anmeldeschluss <span class="opt">(optional)</span></label>
+        <input type="date" id="anmeldeschluss">
+      </div>
+      <div class="field" id="f-ausruestung">
+        <label for="ausruestung">Mitzubringende Ausrüstung <span class="opt">(optional)</span></label>
+        <textarea id="ausruestung"></textarea>
+      </div>
+      <div class="field" id="f-besonderheiten">
+        <label for="besonderheiten">Besonderheiten <span class="opt">(optional)</span></label>
+        <input type="text" id="besonderheiten">
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Beschreibung</p>
+      <div class="field" id="f-beschreibung">
+        <label for="beschreibung">Beschreibung</label>
+        <textarea id="beschreibung" style="min-height:140px" required></textarea>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Kosten</p>
+      <div class="row">
+        <div class="field">
+          <label for="kostenMitglied">Mitglieder (€)</label>
+          <input type="number" id="kostenMitglied" min="0" step="0.5">
+        </div>
+        <div class="field">
+          <label for="kostenNichtmitglied">Nicht-Mitglieder (€)</label>
+          <input type="number" id="kostenNichtmitglied" min="0" step="0.5">
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Kontakt</p>
+      <p class="section-hint" style="margin-bottom:14px;font-size:13px;color:var(--ink-soft);">Für Rückfragen der Teilnehmer:innen – mindestens Telefon oder E-Mail angeben.</p>
+      <div class="row">
+        <div class="field" id="f-kontaktTelefon">
+          <label for="kontaktTelefon">Telefonnummer <span class="opt">(oder E-Mail unten)</span></label>
+          <input type="tel" id="kontaktTelefon">
+        </div>
+        <div class="field" id="f-kontaktEmail">
+          <label for="kontaktEmail">E-Mail <span class="opt">(oder Telefon oben)</span></label>
+          <input type="email" id="kontaktEmail">
+          <p class="field-error">Bitte Telefonnummer oder E-Mail angeben.</p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="kontaktWhatsapp">WhatsApp-Nummer <span class="opt">(optional)</span></label>
+        <input type="tel" id="kontaktWhatsapp">
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="submit" id="submitBtn">Änderungen speichern</button>
+      <button type="button" id="absagenBtn" style="background:#fff;border:1px solid var(--error);color:var(--error);border-radius:2px;padding:13px 26px;font-family:'Inter',sans-serif;font-weight:600;font-size:15px;cursor:pointer;">Tour absagen</button>
+      <p class="status-msg" id="statusMsg"></p>
+    </div>
+  </form>
+
+  <div class="versionen" id="teilnehmerBox" style="display:none">
+    <h2>Anmeldungen</h2>
+    <div id="teilnehmerListe"></div>
+  </div>
+
+  <div class="versionen" id="versionenBox" style="display:none">
+    <h2>Versionsverlauf (nur für den Vorstand sichtbar)</h2>
+    <div id="versionenListe"></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBRq4pDhR3PwPBUdV5Ekjzd8FYh25tzGks",
+    authDomain: "newsletter-touren.firebaseapp.com",
+    projectId: "newsletter-touren",
+    storageBucket: "newsletter-touren.firebasestorage.app",
+    messagingSenderId: "122590369431",
+    appId: "1:122590369431:web:2f648aecc33dd0d46fbbd2"
+  };
+
+  const isConfigured = firebaseConfig.apiKey !== "DEIN_API_KEY";
+  const authGate = document.getElementById('authGate');
+  const listeContainer = document.getElementById('listeContainer');
+  const editForm = document.getElementById('editForm');
+  const versionenBox = document.getElementById('versionenBox');
+  let db = null, auth = null, aktuellerUser = null;
+
+  const params = new URLSearchParams(location.search);
+  const tourId = params.get('id');
+
+  if (isConfigured) {
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    auth = firebase.auth();
+    auth.onAuthStateChanged(pruefeZugriff);
+  } else {
+    document.getElementById('configWarning').classList.add('show');
+    authGate.innerHTML = '<p>Keine Verbindung zu Firebase.</p>';
+  }
+
+  async function pruefeZugriff(user) {
+    if (!user) {
+      authGate.className = 'auth-box';
+      authGate.innerHTML = 'Bitte zuerst einloggen: <a href="login.html">Zum Login</a>';
+      return;
+    }
+    try {
+      const doc = await db.collection('users').doc(user.uid).get();
+      const profil = doc.exists ? doc.data() : null;
+      const rollen = (profil && profil.rollen) || [];
+      const istVorstand = rollen.includes('vorstand') || rollen.includes('admin');
+      if (!profil || profil.status !== 'genehmigt') {
+        authGate.className = 'auth-box';
+        authGate.textContent = 'Dein Account ist nicht freigeschaltet.';
+        return;
+      }
+      if (!istVorstand && !rollen.includes('tourenfuehrer')) {
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Kein Zugriff – dieser Bereich ist nur für Tourenführer:innen oder den Vorstand.';
+        return;
+      }
+      authGate.style.display = 'none';
+      aktuellerUser = { uid: user.uid, istVorstand };
+
+      if (tourId) {
+        ladeEinzelneTour(tourId);
+      } else {
+        listeContainer.style.display = 'block';
+        ladeListe();
+      }
+    } catch (err) {
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler: ' + err.message;
+    }
+  }
+
+  async function ladeListe() {
+    document.getElementById('pageTitle').textContent = aktuellerUser.istVorstand ? 'Alle Touren' : 'Meine Touren';
+    listeContainer.innerHTML = '<p class="empty">Touren werden geladen …</p>';
+    try {
+      let query = aktuellerUser.istVorstand
+        ? db.collection('touren').orderBy('datum', 'desc')
+        : db.collection('touren').where('erstelltVonUid', '==', aktuellerUser.uid);
+
+      const snap = await query.get();
+      const heute = new Date().toISOString().slice(0, 10);
+      let touren = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(t => t.datum >= heute);
+      if (!aktuellerUser.istVorstand) touren.sort((a, b) => (b.datum || '').localeCompare(a.datum || ''));
+
+      if (!touren.length) {
+        listeContainer.innerHTML = '<p class="empty">Keine Touren gefunden.</p>';
+        return;
+      }
+      listeContainer.innerHTML = touren.map(t => `
+        <a class="tour-card" href="touren-bearbeiten.html?id=${t.id}">
+          <div>
+            <p class="titel">${escapeHtml(t.titel)}</p>
+            <p class="meta">${t.datum} · ${escapeHtml(t.status)}${aktuellerUser.istVorstand ? ' · ' + escapeHtml(t.erstelltVon || '') : ''}</p>
+          </div>
+          <span class="meta" id="badge-${t.id}" style="white-space:nowrap;">…</span>
+        </a>`).join('');
+
+      touren.forEach(t => ladeTeilnehmerBadge(t));
+    } catch (err) {
+      listeContainer.innerHTML = '<p class="empty">Fehler beim Laden: ' + err.message + '</p>';
+    }
+  }
+
+  async function ladeTeilnehmerBadge(tour) {
+    const badgeEl = document.getElementById('badge-' + tour.id);
+    if (!badgeEl) return;
+    try {
+      const bestaetigt = tour.bestaetigtAnzahl || 0;
+      const reserviert = tour.reserviertAnzahl || 0;
+      const warteliste = tour.wartelisteAnzahl || 0;
+      let teile = [`${bestaetigt} bestätigt`];
+      if (reserviert) teile.push(`<span style="color:var(--forest-dk); font-weight:600;">${reserviert} Anfrage${reserviert > 1 ? 'n' : ''}</span>`);
+      if (warteliste) teile.push(`<span style="color:#6B5A24;">${warteliste} Warteliste</span>`);
+      badgeEl.innerHTML = teile.join(' · ');
+    } catch (err) {
+      badgeEl.textContent = '';
+    }
+  }
+
+  let geladeneTour = null;
+
+  async function ladeEinzelneTour(id) {
+    document.getElementById('pageTitle').textContent = 'Tour bearbeiten';
+    document.getElementById('pageSub').innerHTML = '<a href="touren-bearbeiten.html">← Zur Liste</a> · <a href="dashboard.html">Zur Übersicht</a>';
+
+    try {
+      const doc = await db.collection('touren').doc(id).get();
+      if (!doc.exists) {
+        authGate.style.display = 'block';
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Diese Tour wurde nicht gefunden.';
+        return;
+      }
+      const tour = doc.data();
+
+      if (!aktuellerUser.istVorstand && tour.erstelltVonUid !== aktuellerUser.uid) {
+        authGate.style.display = 'block';
+        authGate.className = 'auth-box err';
+        authGate.textContent = 'Du darfst nur deine eigenen Touren bearbeiten.';
+        return;
+      }
+
+      geladeneTour = tour;
+      fuelleFormular(tour);
+      editForm.style.display = 'block';
+
+      document.getElementById('teilnehmerBox').style.display = 'block';
+      ladeTeilnehmer(id);
+
+      if (aktuellerUser.istVorstand) {
+        versionenBox.style.display = 'block';
+        ladeVersionen(id);
+      }
+    } catch (err) {
+      authGate.style.display = 'block';
+      authGate.className = 'auth-box err';
+      authGate.textContent = 'Fehler beim Laden: ' + err.message;
+    }
+  }
+
+  async function ladeTeilnehmer(id) {
+    const listeEl = document.getElementById('teilnehmerListe');
+    listeEl.innerHTML = '<p class="empty">Wird geladen …</p>';
+    try {
+      const snap = await db.collection('touren').doc(id).collection('anmeldungen').get();
+      if (snap.empty) {
+        listeEl.innerHTML = '<p class="empty">Noch keine Anmeldungen.</p>';
+        return;
+      }
+      const reihenfolge = { 'anfrage': 0, 'bestätigt': 1, 'warteliste': 2, 'abgelehnt': 3 };
+      let anmeldungen = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      anmeldungen.sort((a, b) => {
+        if (a.status !== b.status) return (reihenfolge[a.status] ?? 9) - (reihenfolge[b.status] ?? 9);
+        const az = a.angemeldetAm?.toMillis ? a.angemeldetAm.toMillis() : 0;
+        const bz = b.angemeldetAm?.toMillis ? b.angemeldetAm.toMillis() : 0;
+        return az - bz;
+      });
+
+      const bestaetigt = anmeldungen.filter(a => a.status === 'bestätigt').reduce((s, a) => s + (a.anzahlPersonen || 1), 0);
+      const warteliste = anmeldungen.filter(a => a.status === 'warteliste').reduce((s, a) => s + (a.anzahlPersonen || 1), 0);
+      const anfragen = anmeldungen.filter(a => a.status === 'anfrage').reduce((s, a) => s + (a.anzahlPersonen || 1), 0);
+      const teileZ = [`${bestaetigt} bestätigt`];
+      if (anfragen) teileZ.push(`${anfragen} Anfrage${anfragen > 1 ? 'n' : ''} offen`);
+      if (warteliste) teileZ.push(`${warteliste} auf Warteliste`);
+      const zusammenfassung = `<p class="empty" style="padding:0 0 10px;">${teileZ.join(', ')}</p>`;
+
+      const statusLabel = { 'bestätigt': 'Bestätigt', 'warteliste': 'Warteliste', 'anfrage': 'Anfrage', 'abgelehnt': 'Abgelehnt' };
+      const statusClass = { 'bestätigt': 'bestaetigt', 'warteliste': 'warteliste', 'anfrage': 'anfrage', 'abgelehnt': 'abgelehnt' };
+
+      listeEl.innerHTML = zusammenfassung + anmeldungen.map(a => {
+        const kontakt = [a.telefon, a.email].filter(Boolean).join(' · ');
+        const personenZeile = (a.personen && a.personen.length > 1)
+          ? `<p class="person-zeile">Personen: ${a.personen.map(p => escapeHtml(p.name)).join(', ')}</p>`
+          : '';
+        const aktionen = a.status === 'anfrage' ? `
+          <div style="display:flex; gap:6px; margin-top:8px;">
+            <button type="button" class="mini bestaetigen-anfrage" data-tour="${id}" data-anmeldung="${a.id}" data-personen="${a.anzahlPersonen || 1}" style="background:var(--forest); border-color:var(--forest); color:#fff;">Bestätigen</button>
+            <button type="button" class="mini ablehnen-anfrage" data-tour="${id}" data-anmeldung="${a.id}" data-personen="${a.anzahlPersonen || 1}" style="color:var(--error); border-color:#F0B4AE;">Ablehnen</button>
+          </div>` : '';
+        return `
+          <div class="teilnehmer-card">
+            <div>
+              <p class="name">${escapeHtml(a.name)}${a.anzahlPersonen > 1 ? ` (+${a.anzahlPersonen - 1})` : ''} · ${a.mitglied ? 'Mitglied' : 'Nicht-Mitglied'}</p>
+              <p class="meta">${escapeHtml(kontakt)}</p>
+              ${personenZeile}
+              ${aktionen}
+            </div>
+            <span class="badge-status ${statusClass[a.status] || ''}">${statusLabel[a.status] || a.status}</span>
+          </div>`;
+      }).join('');
+    } catch (err) {
+      listeEl.innerHTML = '<p class="empty">Fehler beim Laden: ' + err.message + '</p>';
+    }
+  }
+
+  function fuelleFormular(t) {
+    document.getElementById('titel').value = t.titel || '';
+    document.getElementById('datum').value = t.datum || '';
+    document.getElementById('datumEnde').value = t.datumEnde || '';
+    document.getElementById('treffpunkt').value = t.treffpunkt || '';
+    document.getElementById('treffzeit').value = t.treffzeit || '';
+    document.getElementById('status').value = t.status || 'geplant';
+    document.getElementById('disziplin').value = t.disziplin || 'wandern';
+    document.getElementById('schwierigkeit').value = t.schwierigkeit || 'leicht';
+    document.getElementById('maxTeilnehmer').value = t.maxTeilnehmer || '';
+    document.getElementById('anmeldeschluss').value = t.anmeldeschluss || '';
+    document.getElementById('ausruestung').value = t.ausruestung || '';
+    document.getElementById('besonderheiten').value = (t.besonderheiten || []).join(', ');
+    document.getElementById('beschreibung').value = t.beschreibung || '';
+    document.getElementById('kostenMitglied').value = t.kostenMitglied || 0;
+    document.getElementById('kostenNichtmitglied').value = t.kostenNichtmitglied || 0;
+    document.getElementById('kontaktTelefon').value = t.kontaktTelefon || '';
+    document.getElementById('kontaktEmail').value = t.kontaktEmail || '';
+    document.getElementById('kontaktWhatsapp').value = t.kontaktWhatsapp || '';
+  }
+
+  async function ladeVersionen(id) {
+    const listeEl = document.getElementById('versionenListe');
+    try {
+      const snap = await db.collection('touren').doc(id).collection('versionen').orderBy('gespeichertAm', 'desc').get();
+      if (snap.empty) {
+        listeEl.innerHTML = '<p class="empty">Noch keine früheren Versionen.</p>';
+        return;
+      }
+      listeEl.innerHTML = snap.docs.map(d => {
+        const v = d.data();
+        const datum = v.gespeichertAm && v.gespeichertAm.toDate ? v.gespeichertAm.toDate().toLocaleString('de-AT') : '–';
+        return `
+          <details class="version">
+            <summary>Version vom ${datum} · geändert von ${escapeHtml(v.geaendertVonName || v.erstelltVon || '–')}</summary>
+            <p class="alt-feld"><b>Titel:</b> ${escapeHtml(v.titel)}</p>
+            <p class="alt-feld"><b>Datum:</b> ${escapeHtml(v.datum)} · <b>Treffpunkt:</b> ${escapeHtml(v.treffpunkt)}</p>
+            <p class="alt-feld"><b>Beschreibung:</b> ${escapeHtml(v.beschreibung)}</p>
+          </details>`;
+      }).join('');
+    } catch (err) {
+      listeEl.innerHTML = '<p class="empty">Fehler beim Laden der Versionen: ' + err.message + '</p>';
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str || '';
+    return div.innerHTML;
+  }
+
+  const submitBtn = document.getElementById('submitBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  document.getElementById('teilnehmerBox').addEventListener('click', async (e) => {
+    const bestBtn = e.target.closest('button.bestaetigen-anfrage');
+    const ablBtn = e.target.closest('button.ablehnen-anfrage');
+    const btn = bestBtn || ablBtn;
+    if (!btn) return;
+
+    const { tour: tourId, anmeldung: anmeldungId, personen } = btn.dataset;
+    const anzahl = parseInt(personen, 10) || 1;
+    btn.disabled = true;
+
+    try {
+      const tourRef = db.collection('touren').doc(tourId);
+      const anmeldungRef = tourRef.collection('anmeldungen').doc(anmeldungId);
+
+      await db.runTransaction(async (tx) => {
+        const tourSnap = await tx.get(tourRef);
+        const d = tourSnap.data();
+        const bestaetigt = d.bestaetigtAnzahl || 0;
+        const reserviert = d.reserviertAnzahl || 0;
+
+        if (bestBtn) {
+          tx.update(anmeldungRef, { status: 'bestätigt' });
+          tx.update(tourRef, {
+            bestaetigtAnzahl: bestaetigt + anzahl,
+            reserviertAnzahl: Math.max(0, reserviert - anzahl)
+          });
+        } else {
+          tx.update(anmeldungRef, { status: 'abgelehnt' });
+          tx.update(tourRef, { reserviertAnzahl: Math.max(0, reserviert - anzahl) });
+        }
+      });
+
+      ladeTeilnehmer(tourId);
+    } catch (err) {
+      alert('Fehler: ' + err.message);
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('absagenBtn').addEventListener('click', async () => {
+    if (!confirm('Diese Tour wirklich absagen? Teilnehmer werden dadurch NICHT automatisch benachrichtigt.')) return;
+
+    statusMsg.className = 'status-msg';
+    try {
+      const tourRef = db.collection('touren').doc(tourId);
+      const authUser = auth.currentUser;
+      const userDoc = await db.collection('users').doc(authUser.uid).get();
+      const geaendertVonName = userDoc.exists ? (userDoc.data().name || authUser.email) : authUser.email;
+
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(tourRef);
+        const alteDaten = snap.data();
+        const versionRef = tourRef.collection('versionen').doc();
+        tx.set(versionRef, { ...alteDaten, gespeichertAm: firebase.firestore.FieldValue.serverTimestamp(), geaendertVonName });
+        tx.update(tourRef, { status: 'abgesagt', bearbeitetAm: firebase.firestore.FieldValue.serverTimestamp(), bearbeitetVon: geaendertVonName });
+      });
+
+      document.getElementById('status').value = 'abgesagt';
+      statusMsg.textContent = 'Tour wurde abgesagt.';
+      statusMsg.classList.add('show', 'ok');
+      if (aktuellerUser.istVorstand) ladeVersionen(tourId);
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler beim Absagen: ' + err.message;
+      statusMsg.classList.add('show', 'err');
+    }
+  });
+
+  editForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusMsg.className = 'status-msg';
+
+    const kontaktFehlt = !document.getElementById('kontaktTelefon').value.trim()
+      && !document.getElementById('kontaktEmail').value.trim();
+    document.getElementById('f-kontaktEmail').classList.toggle('invalid', kontaktFehlt);
+    if (kontaktFehlt) {
+      statusMsg.textContent = 'Bitte Telefonnummer oder E-Mail als Kontakt angeben.';
+      statusMsg.classList.add('show', 'err');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Speichere …';
+
+    const neueDaten = {
+      titel: document.getElementById('titel').value.trim(),
+      datum: document.getElementById('datum').value,
+      datumEnde: document.getElementById('datumEnde').value || null,
+      treffpunkt: document.getElementById('treffpunkt').value.trim(),
+      treffzeit: document.getElementById('treffzeit').value,
+      status: document.getElementById('status').value,
+      disziplin: document.getElementById('disziplin').value,
+      schwierigkeit: document.getElementById('schwierigkeit').value,
+      maxTeilnehmer: Number(document.getElementById('maxTeilnehmer').value),
+      anmeldeschluss: document.getElementById('anmeldeschluss').value || null,
+      ausruestung: document.getElementById('ausruestung').value.trim() || null,
+      besonderheiten: document.getElementById('besonderheiten').value.split(',').map(s => s.trim()).filter(s => s),
+      beschreibung: document.getElementById('beschreibung').value.trim(),
+      kostenMitglied: Number(document.getElementById('kostenMitglied').value) || 0,
+      kostenNichtmitglied: Number(document.getElementById('kostenNichtmitglied').value) || 0,
+      kontaktTelefon: document.getElementById('kontaktTelefon').value.trim() || null,
+      kontaktEmail: document.getElementById('kontaktEmail').value.trim() || null,
+      kontaktWhatsapp: document.getElementById('kontaktWhatsapp').value.trim() || null
+    };
+
+    try {
+      const tourRef = db.collection('touren').doc(tourId);
+      const authUser = auth.currentUser;
+      const userDoc = await db.collection('users').doc(authUser.uid).get();
+      const geaendertVonName = userDoc.exists ? (userDoc.data().name || authUser.email) : authUser.email;
+
+      await db.runTransaction(async (tx) => {
+        const snap = await tx.get(tourRef);
+        const alteDaten = snap.data();
+
+        const versionRef = tourRef.collection('versionen').doc();
+        tx.set(versionRef, {
+          ...alteDaten,
+          gespeichertAm: firebase.firestore.FieldValue.serverTimestamp(),
+          geaendertVonName
+        });
+
+        tx.update(tourRef, {
+          ...neueDaten,
+          bearbeitetAm: firebase.firestore.FieldValue.serverTimestamp(),
+          bearbeitetVon: geaendertVonName
+        });
+      });
+
+      statusMsg.textContent = 'Änderungen gespeichert. Vorgängerversion im Verlauf archiviert.';
+      statusMsg.classList.add('show', 'ok');
+      if (aktuellerUser.istVorstand) ladeVersionen(tourId);
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler beim Speichern: ' + err.message;
+      statusMsg.classList.add('show', 'err');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Änderungen speichern';
+    }
+  });
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  }
+</script>
+
+</body>
+</html>

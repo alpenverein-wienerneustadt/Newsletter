@@ -629,6 +629,8 @@
       kontaktWhatsapp: document.getElementById('kontaktWhatsapp').value.trim() || null,
       status: 'geplant',
       bestaetigtAnzahl: 0,
+      reserviertAnzahl: 0,
+      wartelisteAnzahl: 0,
       erstelltVon: aktuellerUser.name,
       erstelltVonUid: aktuellerUser.uid,
       erstelltAm: firebase.firestore.FieldValue.serverTimestamp()

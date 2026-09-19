@@ -95,6 +95,26 @@
     padding:12px 16px; border-radius:2px; margin-bottom:24px; display:none;
   }
   .config-warning.show{ display:block; }
+
+  .kapazitaet-modal{
+    display:none; position:fixed; inset:0; background:rgba(42,44,49,0.72); z-index:100;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .kapazitaet-modal.show{ display:flex; }
+  .kapazitaet-modal-inner{
+    background:#fff; border-radius:4px; padding:24px; max-width:400px; width:100%;
+  }
+  .kapazitaet-modal h3{ font-family:'Fraunces', serif; font-size:18px; color:var(--forest-dk); margin:0 0 10px; }
+  .kapazitaet-option{
+    text-align:left; font-family:'Inter', sans-serif; font-size:14px; font-weight:600;
+    border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    border-radius:2px; padding:12px 14px; cursor:pointer;
+  }
+  .kapazitaet-option:hover{ border-color:var(--forest); background:#fff; }
+  .kapazitaet-option .beschreibung{ display:block; font-size:12.5px; font-weight:400; color:var(--ink-soft); margin-top:3px; }
+  .kapazitaet-option.betont{ background:var(--forest); border-color:var(--forest); color:#fff; }
+  .kapazitaet-option.betont .beschreibung{ color:rgba(255,255,255,0.85); }
+  .kapazitaet-option.betont:hover{ background:var(--forest-dk); }
 </style>
 </head>
 <body>
@@ -108,6 +128,15 @@
 
   <div id="content">
     <p class="loading">Tour wird geladen …</p>
+  </div>
+</div>
+
+<div id="kapazitaetModal" class="kapazitaet-modal">
+  <div class="kapazitaet-modal-inner">
+    <h3>Nicht genug Plätze frei</h3>
+    <p id="kapazitaetText" style="font-size:14px; color:var(--ink); margin:0 0 18px;"></p>
+    <div id="kapazitaetOptionen" style="display:flex; flex-direction:column; gap:10px;"></div>
+    <button type="button" id="kapazitaetAbbrechen" style="margin-top:14px; background:none; border:none; color:var(--ink-soft); font-size:13px; cursor:pointer; text-decoration:underline;">Abbrechen</button>
   </div>
 </div>
 
@@ -176,7 +205,8 @@
 
   function render(db, tour) {
     const bestaetigt = tour.bestaetigtAnzahl || 0;
-    const frei = tour.maxTeilnehmer - bestaetigt;
+    const reserviert = tour.reserviertAnzahl || 0;
+    const frei = tour.maxTeilnehmer - bestaetigt - reserviert;
     const istVoll = frei <= 0;
 
     const platzText = istVoll
@@ -264,7 +294,7 @@
     document.getElementById('anzahlPersonen').addEventListener('change', (e) => {
       renderPersonenFelder(parseInt(e.target.value, 10) || 1);
     });
-    document.getElementById('anmeldeForm').addEventListener('submit', (e) => handleAnmeldung(e, db, tour, istVoll));
+    document.getElementById('anmeldeForm').addEventListener('submit', (e) => handleAnmeldung(e, db, tour));
   }
 
   function renderPersonenFelder(anzahl) {
@@ -293,7 +323,7 @@
     container.innerHTML = html;
   }
 
-  async function handleAnmeldung(e, db, tour, warAlsVollErkannt) {
+  async function handleAnmeldung(e, db, tour) {
     e.preventDefault();
     const statusMsg = document.getElementById('statusMsg');
     statusMsg.className = 'status-msg';
@@ -306,17 +336,12 @@
     toggleInvalid('f-email', !telefon && !email);
     if (!telefon && !email) valid = false;
 
-    const personen = [];
     for (let i = 1; i <= anzahlPersonen; i++) {
       const nameEl = document.getElementById(`name-${i}`);
       const mitgliedEl = document.querySelector(`input[name=mitglied-${i}]:checked`);
-      const name = nameEl.value.trim();
-
-      toggleInvalid(`f-name-${i}`, !name);
+      toggleInvalid(`f-name-${i}`, !nameEl.value.trim());
       toggleInvalid(`f-mitglied-${i}`, !mitgliedEl);
-      if (!name || !mitgliedEl) valid = false;
-
-      personen.push({ name, mitglied: mitgliedEl ? mitgliedEl.value === 'ja' : null });
+      if (!nameEl.value.trim() || !mitgliedEl) valid = false;
     }
 
     if (!valid) {
@@ -325,44 +350,201 @@
       return;
     }
 
+    // Vorab-Prüfung: aktuelle Kapazität frisch abfragen (öffentliche Zählerfelder, keine Anmeldedaten)
+    try {
+      const frischeTour = (await db.collection('touren').doc(tour.id).get()).data();
+      const bestaetigt = frischeTour.bestaetigtAnzahl || 0;
+      const reserviert = frischeTour.reserviertAnzahl || 0;
+      const wartelisteVorhanden = (frischeTour.wartelisteAnzahl || 0) > 0;
+      const frei = tour.maxTeilnehmer - bestaetigt - reserviert;
+
+      if (anzahlPersonen <= frei) {
+        fuehreAnmeldungAus(db, tour, null);
+      } else {
+        zeigeKapazitaetsDialog(db, tour, frei, anzahlPersonen, wartelisteVorhanden);
+      }
+    } catch (err) {
+      console.error(err);
+      statusMsg.textContent = 'Fehler: ' + err.message;
+      statusMsg.classList.add('show', 'err');
+    }
+  }
+
+  function zeigeKapazitaetsDialog(db, tour, frei, anzahlPersonen, wartelisteVorhanden) {
+    const modal = document.getElementById('kapazitaetModal');
+    document.getElementById('kapazitaetText').textContent =
+      frei > 0
+        ? `Nur noch ${frei} von ${anzahlPersonen} angefragten Plätzen frei.`
+        : `Alle Plätze sind bereits vergeben.`;
+
+    let optionenHtml = '';
+    if (frei > 0) {
+      optionenHtml += `
+        <button type="button" class="kapazitaet-option" id="optAnzahlAendern">
+          Anzahl auf ${frei} ändern
+          <span class="beschreibung">Formular bleibt offen, du kannst die Auswahl anpassen</span>
+        </button>`;
+    }
+    optionenHtml += `
+      <button type="button" class="kapazitaet-option" id="optWarteliste">
+        Ganze Gruppe auf die Warteliste
+        <span class="beschreibung">Rückt automatisch nach, sobald Plätze frei werden</span>
+      </button>`;
+
+    if (!wartelisteVorhanden) {
+      optionenHtml += `
+        <button type="button" class="kapazitaet-option betont" id="optAnfrage">
+          Tourenführer:in kontaktieren
+          <span class="beschreibung">Plätze werden vorgemerkt, bis Tourenführer:in entscheidet</span>
+        </button>`;
+    } else {
+      optionenHtml += `
+        <p style="font-size:12.5px; color:var(--ink-soft); margin:4px 0 0;">
+          Es stehen bereits Personen auf der Warteliste – bitte zuerst dort anmelden. Der/die Tourenführer:in kontaktiert die Warteliste, falls Plätze frei werden.
+        </p>`;
+    }
+
+    optionenHtml += `
+      <button type="button" class="kapazitaet-option" id="optAndereTour">
+        An einer anderen Tour teilnehmen
+        <span class="beschreibung">Zeigt Touren derselben Kategorie mit genug freien Plätzen</span>
+      </button>`;
+
+    document.getElementById('kapazitaetOptionen').innerHTML = optionenHtml;
+    modal.classList.add('show');
+
+    const schliessen = () => modal.classList.remove('show');
+    document.getElementById('kapazitaetAbbrechen').onclick = schliessen;
+
+    const anzahlBtn = document.getElementById('optAnzahlAendern');
+    if (anzahlBtn) anzahlBtn.onclick = () => {
+      document.getElementById('anzahlPersonen').value = String(frei);
+      renderPersonenFelder(frei);
+      schliessen();
+    };
+
+    document.getElementById('optWarteliste').onclick = () => {
+      schliessen();
+      fuehreAnmeldungAus(db, tour, 'warteliste');
+    };
+
+    const anfrageBtn = document.getElementById('optAnfrage');
+    if (anfrageBtn) anfrageBtn.onclick = () => {
+      schliessen();
+      fuehreAnmeldungAus(db, tour, 'anfrage');
+    };
+
+    document.getElementById('optAndereTour').onclick = () => zeigeAndereTourenVorschlaege(db, tour, anzahlPersonen);
+  }
+
+  async function zeigeAndereTourenVorschlaege(db, tour, anzahlPersonen) {
+    const container = document.getElementById('kapazitaetOptionen');
+    container.innerHTML = '<p style="font-size:13.5px; color:var(--ink-soft);">Wird gesucht …</p>';
+    document.getElementById('kapazitaetText').textContent = 'Andere Touren derselben Kategorie:';
+
+    try {
+      const heute = new Date().toISOString().slice(0, 10);
+      const snap = await db.collection('touren')
+        .where('status', '==', 'geplant')
+        .where('disziplin', '==', tour.disziplin)
+        .get();
+
+      const vorschlaege = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(t => t.id !== tour.id && t.datum >= heute)
+        .map(t => ({ ...t, frei: t.maxTeilnehmer - (t.bestaetigtAnzahl || 0) - (t.reserviertAnzahl || 0) }))
+        .filter(t => t.frei >= anzahlPersonen)
+        .sort((a, b) => (a.datum || '').localeCompare(b.datum || ''));
+
+      if (!vorschlaege.length) {
+        container.innerHTML = `
+          <p style="font-size:13.5px; color:var(--ink-soft);">Keine andere Tour dieser Kategorie mit genug freien Plätzen gefunden.</p>
+          <button type="button" class="kapazitaet-option" id="optZurueck">← Zurück zur Auswahl</button>`;
+      } else {
+        container.innerHTML = vorschlaege.map(t => `
+          <a class="kapazitaet-option" href="tour-detail.html?id=${t.id}" style="display:block; text-decoration:none;">
+            ${escapeHtml(t.titel)} – ${formatDatum(t.datum)}
+            <span class="beschreibung">${t.frei} von ${t.maxTeilnehmer} Plätzen frei</span>
+          </a>`).join('') + `<button type="button" class="kapazitaet-option" id="optZurueck">← Zurück zur Auswahl</button>`;
+      }
+
+      const zurueckBtn = document.getElementById('optZurueck');
+      if (zurueckBtn) zurueckBtn.onclick = () => {
+        const bestaetigt = tour.bestaetigtAnzahl || 0;
+        const reserviert = tour.reserviertAnzahl || 0;
+        const frei = tour.maxTeilnehmer - bestaetigt - reserviert;
+        const wartelisteVorhanden = (tour.wartelisteAnzahl || 0) > 0;
+        zeigeKapazitaetsDialog(db, tour, frei, anzahlPersonen, wartelisteVorhanden);
+      };
+    } catch (err) {
+      container.innerHTML = '<p style="font-size:13.5px; color:var(--error);">Fehler beim Suchen: ' + err.message + '</p>';
+    }
+  }
+
+  async function fuehreAnmeldungAus(db, tour, modus) {
+    const statusMsg = document.getElementById('statusMsg');
+    statusMsg.className = 'status-msg';
+
+    const anzahlPersonen = parseInt(document.getElementById('anzahlPersonen').value, 10) || 1;
+    const telefon = document.getElementById('telefon').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const personen = [];
+    for (let i = 1; i <= anzahlPersonen; i++) {
+      const mitgliedEl = document.querySelector(`input[name=mitglied-${i}]:checked`);
+      personen.push({
+        name: document.getElementById(`name-${i}`).value.trim(),
+        mitglied: mitgliedEl ? mitgliedEl.value === 'ja' : null
+      });
+    }
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
     submitBtn.textContent = 'Wird gesendet …';
 
     try {
-      // Eindeutige, aus dem Kontakt abgeleitete Dokument-ID statt Zufalls-ID:
-      // ein zweiter Anmeldeversuch mit denselben Kontaktdaten trifft auf dasselbe Dokument.
-      // Da die Security Rules "update" auf Anmeldungen verbieten, schlägt der zweite Versuch
-      // automatisch fehl – ganz ohne dass irgendjemand die bestehenden Anmeldungen lesen können muss.
       const kontaktId = normalizeId(email || telefon);
       const tourRef = db.collection('touren').doc(tour.id);
       const anmeldungRef = tourRef.collection('anmeldungen').doc(kontaktId);
 
-      const status = await db.runTransaction(async (tx) => {
-        const tourSnap = await tx.get(tourRef);
-        const bestaetigt = tourSnap.data().bestaetigtAnzahl || 0;
-        const maxTeilnehmer = tourSnap.data().maxTeilnehmer;
-        const neuerStatus = (bestaetigt + anzahlPersonen) <= maxTeilnehmer ? 'bestätigt' : 'warteliste';
+      const neuerStatus = await db.runTransaction(async (tx) => {
+        const snap = await tx.get(tourRef);
+        const d = snap.data();
+        const bestaetigt = d.bestaetigtAnzahl || 0;
+        const reserviert = d.reserviertAnzahl || 0;
+        const wartelisteAnzahl = d.wartelisteAnzahl || 0;
+        const frei = d.maxTeilnehmer - bestaetigt - reserviert;
+
+        let status;
+        if (modus === 'warteliste') status = 'warteliste';
+        else if (modus === 'anfrage') status = 'anfrage';
+        else status = anzahlPersonen <= frei ? 'bestätigt' : 'warteliste';
 
         tx.set(anmeldungRef, {
           name: personen[0].name, telefon: telefon || null, email: email || null,
           mitglied: personen[0].mitglied,
           personen,
           anzahlPersonen,
-          status: neuerStatus,
+          status,
           angemeldetAm: firebase.firestore.FieldValue.serverTimestamp()
         });
 
-        if (neuerStatus === 'bestätigt') {
+        if (status === 'bestätigt') {
           tx.update(tourRef, { bestaetigtAnzahl: bestaetigt + anzahlPersonen });
+        } else if (status === 'warteliste') {
+          tx.update(tourRef, { wartelisteAnzahl: wartelisteAnzahl + anzahlPersonen });
+        } else if (status === 'anfrage') {
+          tx.update(tourRef, { reserviertAnzahl: reserviert + anzahlPersonen });
         }
-        return neuerStatus;
+        return status;
       });
 
       const personText = anzahlPersonen === 1 ? '' : ` (${anzahlPersonen} Personen)`;
-      statusMsg.textContent = status === 'bestätigt'
-        ? `Anmeldung erfolgreich${personText} – euer Platz ist reserviert.`
-        : `Anmeldung erfolgreich${personText} – ihr steht auf der Warteliste.`;
+      const meldungen = {
+        'bestätigt': `Anmeldung erfolgreich${personText} – euer Platz ist reserviert.`,
+        'warteliste': `Anmeldung erfolgreich${personText} – ihr steht auf der Warteliste.`,
+        'anfrage': `Anfrage gesendet${personText} – die Plätze sind für euch vorgemerkt, bis der/die Tourenführer:in entscheidet.`
+      };
+      statusMsg.textContent = meldungen[neuerStatus];
       statusMsg.classList.add('show', 'ok');
       document.getElementById('anmeldeForm').reset();
       renderPersonenFelder(1);
