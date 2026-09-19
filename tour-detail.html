@@ -192,8 +192,7 @@
 
       <dl class="facts">
         <div class="fact"><dt>Datum</dt><dd>${formatDatum(tour.datum)}${tour.datumEnde ? ' – ' + formatDatum(tour.datumEnde) : ''}</dd></div>
-        <div class="fact"><dt>Treffpunkt</dt><dd>${escapeHtml(tour.treffpunkt)}</dd></div>
-        <div class="fact"><dt>Treffzeit</dt><dd>${escapeHtml(tour.treffzeit)}</dd></div>
+        <div class="fact"><dt>Treffpunkt</dt><dd>${escapeHtml(tour.treffpunkt)}${tour.treffzeit ? ' um ' + escapeHtml(tour.treffzeit) + ' Uhr' : ''}</dd></div>
         <div class="fact"><dt>Anmeldeschluss</dt><dd>${tour.anmeldeschluss ? formatDatum(tour.anmeldeschluss) : '–'}</dd></div>
         <div class="fact"><dt>Kosten Mitglieder</dt><dd>${tour.kostenMitglied ? tour.kostenMitglied + ' €' : 'kostenlos'}</dd></div>
         <div class="fact"><dt>Kosten Nicht-Mitglieder</dt><dd>${tour.kostenNichtmitglied ? tour.kostenNichtmitglied + ' €' : 'kostenlos'}</dd></div>

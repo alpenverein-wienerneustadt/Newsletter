@@ -484,7 +484,7 @@
           </div>
           <p class="card-desc">${escapeHtml(descExcerpt)}</p>
           <div class="card-bottom">
-            <span>${escapeHtml(t.treffpunkt)}</span>
+            <span>${escapeHtml(t.treffpunkt)}${t.treffzeit ? ', ' + escapeHtml(t.treffzeit) + ' Uhr' : ''}</span>
             ${platzHtml}
           </div>
         </a>`;
