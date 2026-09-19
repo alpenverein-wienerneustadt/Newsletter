@@ -463,7 +463,8 @@
 
     listEl.innerHTML = gefiltert.map(t => {
       const bestaetigt = t.bestaetigtAnzahl || 0;
-      const frei = t.maxTeilnehmer - bestaetigt;
+      const reserviert = t.reserviertAnzahl || 0;
+      const frei = t.maxTeilnehmer - bestaetigt - reserviert;
       const platzHtml = frei > 0
         ? `<span class="platz-frei">${frei} von ${t.maxTeilnehmer} Plätzen frei</span>`
         : `<span class="platz-voll">Warteliste</span>`;
