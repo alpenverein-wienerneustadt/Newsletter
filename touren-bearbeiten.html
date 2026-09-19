@@ -103,6 +103,17 @@
   details.version summary{ cursor:pointer; font-weight:600; color:var(--ink-soft); }
   details.version .alt-feld{ margin:4px 0 0 4px; color:var(--ink-soft); }
   details.version .alt-feld b{ color:var(--ink); font-weight:600; }
+
+  .teilnehmer-card{
+    background:#fff; border:1px solid var(--line); border-radius:3px; padding:12px 16px; margin-bottom:8px;
+    display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap;
+  }
+  .teilnehmer-card .name{ font-weight:600; font-size:14px; }
+  .teilnehmer-card .meta{ font-size:12.5px; color:var(--ink-soft); margin-top:2px; }
+  .teilnehmer-card .person-zeile{ font-size:12.5px; color:var(--ink-soft); margin-top:4px; }
+  .badge-status{ font-size:11px; padding:3px 9px; border-radius:20px; flex-shrink:0; }
+  .badge-status.bestaetigt{ background:#E3EAE0; color:var(--forest-dk); }
+  .badge-status.warteliste{ background:#EFE7D0; color:#6B5A24; }
 </style>
 </head>
 <body>
@@ -252,6 +263,11 @@
     </div>
   </form>
 
+  <div class="versionen" id="teilnehmerBox" style="display:none">
+    <h2>Anmeldungen</h2>
+    <div id="teilnehmerListe"></div>
+  </div>
+
   <div class="versionen" id="versionenBox" style="display:none">
     <h2>Versionsverlauf (nur für den Vorstand sichtbar)</h2>
     <div id="versionenListe"></div>
@@ -329,6 +345,7 @@
   }
 
   async function ladeListe() {
+    document.getElementById('pageTitle').textContent = aktuellerUser.istVorstand ? 'Alle Touren' : 'Meine Touren';
     listeContainer.innerHTML = '<p class="empty">Touren werden geladen …</p>';
     try {
       let query = aktuellerUser.istVorstand
@@ -350,9 +367,27 @@
             <p class="titel">${escapeHtml(t.titel)}</p>
             <p class="meta">${t.datum} · ${escapeHtml(t.status)}${aktuellerUser.istVorstand ? ' · ' + escapeHtml(t.erstelltVon || '') : ''}</p>
           </div>
+          <span class="meta" id="badge-${t.id}" style="white-space:nowrap;">…</span>
         </a>`).join('');
+
+      touren.forEach(t => ladeTeilnehmerBadge(t));
     } catch (err) {
       listeContainer.innerHTML = '<p class="empty">Fehler beim Laden: ' + err.message + '</p>';
+    }
+  }
+
+  async function ladeTeilnehmerBadge(tour) {
+    const badgeEl = document.getElementById('badge-' + tour.id);
+    if (!badgeEl) return;
+    try {
+      const snap = await db.collection('touren').doc(tour.id).collection('anmeldungen').get();
+      const bestaetigt = tour.bestaetigtAnzahl || 0;
+      const warteliste = snap.docs
+        .filter(d => d.data().status === 'warteliste')
+        .reduce((summe, d) => summe + (d.data().anzahlPersonen || 1), 0);
+      badgeEl.innerHTML = `${bestaetigt} bestätigt${warteliste ? ` · <span style="color:#6B5A24;">${warteliste} Warteliste</span>` : ''}`;
+    } catch (err) {
+      badgeEl.textContent = '';
     }
   }
 
@@ -383,6 +418,9 @@
       fuelleFormular(tour);
       editForm.style.display = 'block';
 
+      document.getElementById('teilnehmerBox').style.display = 'block';
+      ladeTeilnehmer(id);
+
       if (aktuellerUser.istVorstand) {
         versionenBox.style.display = 'block';
         ladeVersionen(id);
@@ -391,6 +429,47 @@
       authGate.style.display = 'block';
       authGate.className = 'auth-box err';
       authGate.textContent = 'Fehler beim Laden: ' + err.message;
+    }
+  }
+
+  async function ladeTeilnehmer(id) {
+    const listeEl = document.getElementById('teilnehmerListe');
+    listeEl.innerHTML = '<p class="empty">Wird geladen …</p>';
+    try {
+      const snap = await db.collection('touren').doc(id).collection('anmeldungen').get();
+      if (snap.empty) {
+        listeEl.innerHTML = '<p class="empty">Noch keine Anmeldungen.</p>';
+        return;
+      }
+      let anmeldungen = snap.docs.map(d => d.data());
+      anmeldungen.sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'bestätigt' ? -1 : 1;
+        const az = a.angemeldetAm?.toMillis ? a.angemeldetAm.toMillis() : 0;
+        const bz = b.angemeldetAm?.toMillis ? b.angemeldetAm.toMillis() : 0;
+        return az - bz;
+      });
+
+      const bestaetigt = anmeldungen.filter(a => a.status === 'bestätigt').length;
+      const warteliste = anmeldungen.length - bestaetigt;
+      const zusammenfassung = `<p class="empty" style="padding:0 0 10px;">${bestaetigt} bestätigt${warteliste ? `, ${warteliste} auf Warteliste` : ''}</p>`;
+
+      listeEl.innerHTML = zusammenfassung + anmeldungen.map(a => {
+        const kontakt = [a.telefon, a.email].filter(Boolean).join(' · ');
+        const personenZeile = (a.personen && a.personen.length > 1)
+          ? `<p class="person-zeile">Personen: ${a.personen.map(p => escapeHtml(p.name)).join(', ')}</p>`
+          : '';
+        return `
+          <div class="teilnehmer-card">
+            <div>
+              <p class="name">${escapeHtml(a.name)}${a.anzahlPersonen > 1 ? ` (+${a.anzahlPersonen - 1})` : ''} · ${a.mitglied ? 'Mitglied' : 'Nicht-Mitglied'}</p>
+              <p class="meta">${escapeHtml(kontakt)}</p>
+              ${personenZeile}
+            </div>
+            <span class="badge-status ${a.status === 'bestätigt' ? 'bestaetigt' : 'warteliste'}">${a.status === 'bestätigt' ? 'Bestätigt' : 'Warteliste'}</span>
+          </div>`;
+      }).join('');
+    } catch (err) {
+      listeEl.innerHTML = '<p class="empty">Fehler beim Laden: ' + err.message + '</p>';
     }
   }
 
